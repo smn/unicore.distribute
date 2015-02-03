@@ -11,6 +11,6 @@ install:
   - pip install -e .
 script:
   - flake8 unicore
-  - py.test
+  - py.test --cov unicore
 after_success:
   - coveralls
