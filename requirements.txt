@@ -1,0 +1,3 @@
+elastic-git
+unicore.content
+pyramid-celery>=2.0.0rc4
