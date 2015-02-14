@@ -2,8 +2,10 @@ import os
 import re
 
 from ConfigParser import ConfigParser
+from pyramid.exceptions import NotFound
 
 from git import Repo
+from git.exc import InvalidGitRepositoryError, NoSuchPathError
 
 
 class UCConfigParser(ConfigParser):
@@ -40,7 +42,10 @@ def get_repository(path):
         The path to the repository
     :returns: Repo
     """
-    return Repo(path)
+    try:
+        return Repo(path)
+    except (NoSuchPathError, InvalidGitRepositoryError):
+        raise NotFound('Repository not found.')
 
 
 def format_repo(repo):

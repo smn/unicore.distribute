@@ -8,7 +8,7 @@ from unicore.distribute.utils import (
 
 
 @resource(collection_path='/repos/', path='/repos/{name}/')
-class Repository(object):
+class RepositoryResource(object):
 
     def __init__(self, request):
         self.request = request
