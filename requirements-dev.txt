@@ -3,3 +3,5 @@ pytest-cov
 pytest-xdist
 python-slugify
 Sphinx
+sphinx_rtd_theme
+-e .
