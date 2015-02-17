@@ -16,13 +16,13 @@ class RepositoryResource(object):
         self.config = get_config(request)
 
     def collection_get(self):
-        repo_path = self.config.get('unicore.distribute', 'repo.storage_path')
+        repo_path = self.config.get('repo.storage_path')
         return [format_repo(repo) for repo in get_repositories(repo_path)]
 
     @view(renderer='json')
     def get(self):
         name = self.request.matchdict['name']
-        repo_path = self.config.get('unicore.distribute', 'repo.storage_path')
+        repo_path = self.config.get('repo.storage_path')
         return format_repo(get_repository(os.path.join(repo_path, name)))
 
 
@@ -37,7 +37,7 @@ class ContentTypeResource(object):
     def collection_get(self):
         name = self.request.matchdict['name']
         content_type = self.request.matchdict['content_type']
-        repo_path = self.config.get('unicore.distribute', 'repo.storage_path')
+        repo_path = self.config.get('repo.storage_path')
         return format_content_type(
             get_repository(os.path.join(repo_path, name)),
             content_type)
@@ -47,7 +47,7 @@ class ContentTypeResource(object):
         name = self.request.matchdict['name']
         content_type = self.request.matchdict['content_type']
         uuid = self.request.matchdict['uuid']
-        repo_path = self.config.get('unicore.distribute', 'repo.storage_path')
+        repo_path = self.config.get('repo.storage_path')
         return format_content_type_object(
             get_repository(os.path.join(repo_path, name)),
             content_type, uuid)

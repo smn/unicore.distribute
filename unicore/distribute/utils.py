@@ -202,6 +202,4 @@ def get_config(request):  # pragma: no cover
     :param Request request:
         The HTTP request
     """
-    cp = UCConfigParser()
-    cp.read('setup.cfg')
-    return cp
+    return request.registry.settings
