@@ -1,12 +1,17 @@
+import json
+import os
 import textwrap
 
 from StringIO import StringIO
 from unittest import TestCase
 
-from unicore.distribute.utils import (
-    UCConfigParser, get_repositories, get_repository, format_repo)
+from elasticgit.tests.base import TestPerson, ModelBaseTest
+from elasticgit.commands.avro import serialize
 
-from elasticgit.tests.base import ModelBaseTest
+from unicore.distribute.utils import (
+    UCConfigParser, get_repositories, get_repository, format_repo,
+    format_content_type)
+
 
 from git import Repo
 
@@ -65,3 +70,17 @@ class TestRepositoryUtils(ModelBaseTest):
         self.assertEqual(
             formatted['author'], '%s <%s>' % (last_commit.author.name,
                                               last_commit.author.email))
+
+    def test_format_content_type(self):
+        p = TestPerson({'name': 'Foo', 'age': 1})
+        schema_string = serialize(TestPerson)
+        schema = json.loads(schema_string)
+        self.workspace.sm.store_data(
+            os.path.join(
+                '_schemas',
+                '%(namespace)s.%(name)s.avsc' % schema),
+            schema_string, 'Writing the schema.')
+        self.workspace.save(p, 'Saving a person.')
+        [model_obj] = format_content_type(
+            self.workspace.repo, '%(namespace)s.%(name)s' % schema)
+        self.assertEqual(TestPerson(model_obj), p)
