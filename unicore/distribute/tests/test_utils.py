@@ -10,7 +10,7 @@ from elasticgit.commands.avro import serialize
 
 from unicore.distribute.utils import (
     UCConfigParser, get_repositories, get_repository, format_repo,
-    format_content_type)
+    format_content_type, format_content_type_object)
 
 
 from git import Repo
@@ -83,4 +83,19 @@ class TestRepositoryUtils(ModelBaseTest):
         self.workspace.save(p, 'Saving a person.')
         [model_obj] = format_content_type(
             self.workspace.repo, '%(namespace)s.%(name)s' % schema)
+        self.assertEqual(TestPerson(model_obj), p)
+
+    def test_format_content_type_object(self):
+        p = TestPerson({'name': 'Foo', 'age': 1})
+        schema_string = serialize(TestPerson)
+        schema = json.loads(schema_string)
+        self.workspace.sm.store_data(
+            os.path.join(
+                '_schemas',
+                '%(namespace)s.%(name)s.avsc' % schema),
+            schema_string, 'Writing the schema.')
+        self.workspace.save(p, 'Saving a person.')
+        model_obj = format_content_type_object(
+            self.workspace.repo, '%(namespace)s.%(name)s' % schema,
+            p.uuid)
         self.assertEqual(TestPerson(model_obj), p)

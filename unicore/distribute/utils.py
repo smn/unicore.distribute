@@ -197,7 +197,7 @@ def format_content_type_object(repo, content_type, uuid):
         raise NotFound('Object does not exist.')
 
 
-def get_config(request):
+def get_config(request):  # pragma: no cover
     """
     Get the configuration for a request.
 
