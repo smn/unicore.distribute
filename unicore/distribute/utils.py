@@ -18,12 +18,49 @@ from elasticgit.storage import StorageManager
 
 
 class UCConfigParser(ConfigParser):
-
+    """
+    A config parser that understands lists and dictionaries.
+    """
     def get_list(self, section, option):
+        """
+        This allows for loading of Pyramid list style configuration
+        options:
+
+        [foo]
+        bar =
+            baz
+            qux
+            zap
+
+        ``get_list('foo', 'bar')`` returns ``['baz', 'qux', 'zap']``
+
+        :param str section:
+            The section to read.
+        :param str option:
+            The option to read from the section.
+        :returns: list
+        """
         value = self.get(section, option)
         return list(filter(None, (x.strip() for x in value.splitlines())))
 
     def get_dict(self, section, option):
+        """
+        This allows for loading of Pyramid dictionary style configuration
+        options:
+
+        [foo]
+        bar =
+            baz=qux
+            zap=paz
+
+        ``get_dict('foo', 'bar')`` returns ``{'baz': 'qux', 'zap': 'paz'}``
+
+        :param str section:
+            The section to read.
+        :param str option:
+            The option to read from the section.
+        :returns: dict
+        """
         return dict(re.split('\s*=\s*', value)
                     for value in self.get_list(section, option))
 
@@ -58,6 +95,13 @@ def get_repository(path):
 
 
 def list_schemas(repo):
+    """
+    Return a list of parsed avro schemas as dictionaries.
+
+    :param Repo repo:
+        The git repository.
+    :returns: dict
+    """
     schema_files = glob.glob(
         os.path.join(repo.working_dir, '_schemas', '*.avsc'))
     schemas = []
@@ -71,6 +115,13 @@ def list_schemas(repo):
 
 
 def get_schema(repo, content_type):
+    """
+    Return a schema for a content type in a repository.
+
+    :param Repo repo:
+        The git repository.
+    :returns: dict
+    """
     try:
         with open(
             os.path.join(repo.working_dir,
@@ -109,6 +160,16 @@ def format_repo(repo):
 
 
 def format_content_type(repo, content_type):
+    """
+    Return a list of all content objects for a given content type
+    in a repository.
+
+    :param Repo repo:
+        The git repository.
+    :param str content_type:
+        The content type to list
+    :returns: list
+    """
     storage_manager = StorageManager(repo)
     schema = get_schema(repo, content_type)
     model_class = deserialize(schema, module_name=schema['namespace'])
@@ -117,6 +178,16 @@ def format_content_type(repo, content_type):
 
 
 def format_content_type_object(repo, content_type, uuid):
+    """
+    Return a content object from a repository for a given content_type
+    and uuid
+
+    :param Repo repo:
+        The git repository.
+    :param str content_type:
+        The content type to list
+    :returns: dict
+    """
     try:
         storage_manager = StorageManager(repo)
         schema = get_schema(repo, content_type)
