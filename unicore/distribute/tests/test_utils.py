@@ -10,7 +10,8 @@ from elasticgit.commands.avro import serialize
 
 from unicore.distribute.utils import (
     UCConfigParser, get_repositories, get_repository, format_repo,
-    format_content_type, format_content_type_object)
+    format_content_type, format_content_type_object,
+    list_schemas, get_schema)
 
 
 from git import Repo
@@ -46,6 +47,8 @@ class TestUCConfigParser(TestCase):
 
 
 class TestRepositoryUtils(ModelBaseTest):
+
+    maxDiff = None
 
     def setUp(self):
         self.workspace = self.mk_workspace()
@@ -99,3 +102,30 @@ class TestRepositoryUtils(ModelBaseTest):
             self.workspace.repo, '%(namespace)s.%(name)s' % schema,
             p.uuid)
         self.assertEqual(TestPerson(model_obj), p)
+
+    def test_list_schemas(self):
+        schema_string = serialize(TestPerson)
+        schema = json.loads(schema_string)
+        self.workspace.sm.store_data(
+            os.path.join(
+                '_schemas',
+                '%(namespace)s.%(name)s.avsc' % schema),
+            schema_string, 'Writing the schema.')
+        schemas = list_schemas(self.workspace.repo)
+        found_schema = schemas['%(namespace)s.%(name)s' % schema]
+        self.assertEqual(found_schema['namespace'], schema['namespace'])
+        self.assertEqual(found_schema['name'], schema['name'])
+
+    def test_get_schema(self):
+        schema_string = serialize(TestPerson)
+        schema = json.loads(schema_string)
+        self.workspace.sm.store_data(
+            os.path.join(
+                '_schemas',
+                '%(namespace)s.%(name)s.avsc' % schema),
+            schema_string, 'Writing the schema.')
+        found_schema = get_schema(
+            self.workspace.repo,
+            '%(namespace)s.%(name)s' % schema)
+        self.assertEqual(found_schema['namespace'], schema['namespace'])
+        self.assertEqual(found_schema['name'], schema['name'])

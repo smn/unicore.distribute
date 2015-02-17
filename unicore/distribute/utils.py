@@ -90,7 +90,7 @@ def get_repository(path):
     """
     try:
         return Repo(path)
-    except (NoSuchPathError, InvalidGitRepositoryError):
+    except (NoSuchPathError, InvalidGitRepositoryError):  # pragma: no cover
         raise NotFound('Repository not found.')
 
 
@@ -104,13 +104,11 @@ def list_schemas(repo):
     """
     schema_files = glob.glob(
         os.path.join(repo.working_dir, '_schemas', '*.avsc'))
-    schemas = []
+    schemas = {}
     for schema_file in schema_files:
         with open(schema_file, 'r') as fp:
             schema = json.load(fp)
-            schemas.append({
-                '%(namespace)s.%(name)s' % schema: schema
-            })
+            schemas['%(namespace)s.%(name)s' % schema] = schema
     return schemas
 
 
@@ -128,7 +126,7 @@ def get_schema(repo, content_type):
                          '_schemas',
                          '%s.avsc' % (content_type,)), 'r') as fp:
             return avro.schema.parse(fp.read()).to_json()
-    except IOError:
+    except IOError:  # pragma: no cover
         raise NotFound('Schema does not exist.')
 
 
@@ -193,7 +191,7 @@ def format_content_type_object(repo, content_type, uuid):
         schema = get_schema(repo, content_type)
         model_class = deserialize(schema, module_name=schema['namespace'])
         return dict(storage_manager.get(model_class, uuid))
-    except GitCommandError:
+    except GitCommandError:  # pragma: no cover
         raise NotFound('Object does not exist.')
 
 
