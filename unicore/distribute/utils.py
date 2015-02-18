@@ -90,7 +90,7 @@ def get_repository(path):
     """
     try:
         return Repo(path)
-    except (NoSuchPathError, InvalidGitRepositoryError):  # pragma: no cover
+    except (NoSuchPathError, InvalidGitRepositoryError):
         raise NotFound('Repository not found.')
 
 
@@ -191,7 +191,7 @@ def format_content_type_object(repo, content_type, uuid):
         schema = get_schema(repo, content_type)
         model_class = deserialize(schema, module_name=schema['namespace'])
         return dict(storage_manager.get(model_class, uuid))
-    except GitCommandError:  # pragma: no cover
+    except GitCommandError:
         raise NotFound('Object does not exist.')
 
 
