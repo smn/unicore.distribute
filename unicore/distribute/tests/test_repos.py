@@ -106,3 +106,15 @@ class TestContentTypeResource(ModelBaseTest):
         }
         resource = ContentTypeResource(request)
         self.assertRaises(NotFound, resource.get)
+
+    def test_put(self):
+        request = testing.DummyRequest()
+        request.body = json.dumps({})
+        request.matchdict = {
+            'name': os.path.basename(self.workspace.working_dir),
+            'content_type': fqcn(TestPerson),
+            'uuid': self.person.uuid,
+        }
+        resource = ContentTypeResource(request)
+        object_json = resource.put()
+        print object_json
