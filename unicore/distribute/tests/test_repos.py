@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import json
 import os
 
@@ -7,6 +9,8 @@ from elasticgit.utils import fqcn
 
 from pyramid import testing
 from pyramid.exceptions import NotFound
+
+import avro
 
 from unicore.distribute.api.repos import (
     RepositoryResource, ContentTypeResource)
@@ -109,12 +113,34 @@ class TestContentTypeResource(ModelBaseTest):
 
     def test_put(self):
         request = testing.DummyRequest()
-        request.body = json.dumps({})
+        request.schema = avro.schema.parse(serialize(TestPerson)).to_json()
+        request.schema_data = dict(self.person)
+        request.matchdict = {
+            'name': os.path.basename(self.workspace.working_dir),
+            'content_type': fqcn(TestPerson),
+            'uuid': self.person.uuid,
+        }
+        request.registry = self.config.registry
+        resource = ContentTypeResource(request)
+        object_data = resource.put()
+        self.assertEqual(TestPerson(object_data), self.person)
+
+    def test_delete(self):
+        request = testing.DummyRequest()
         request.matchdict = {
             'name': os.path.basename(self.workspace.working_dir),
             'content_type': fqcn(TestPerson),
             'uuid': self.person.uuid,
         }
         resource = ContentTypeResource(request)
-        object_json = resource.put()
-        print object_json
+        object_data = resource.delete()
+        self.assertEqual(TestPerson(object_data), self.person)
+
+        request = testing.DummyRequest({})
+        request.matchdict = {
+            'name': os.path.basename(self.workspace.working_dir),
+            'content_type': fqcn(TestPerson),
+            'uuid': self.person.uuid,
+        }
+        resource = ContentTypeResource(request)
+        self.assertRaises(NotFound, resource.get)
