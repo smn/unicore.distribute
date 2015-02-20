@@ -212,15 +212,12 @@ def delete_content_type_object(repo, content_type, uuid):
     """
     Delete an object of a certain content type
     """
-    try:
-        storage_manager = StorageManager(repo)
-        schema = get_schema(repo, content_type).to_json()
-        model_class = deserialize(schema, module_name=schema['namespace'])
-        model = storage_manager.get(model_class, uuid)
-        commit = storage_manager.delete(model, 'Deleted via DELETE request.')
-        return commit, model
-    except GitCommandError:
-        raise NotFound('Object does not exist.')
+    storage_manager = StorageManager(repo)
+    schema = get_schema(repo, content_type).to_json()
+    model_class = deserialize(schema, module_name=schema['namespace'])
+    model = storage_manager.get(model_class, uuid)
+    commit = storage_manager.delete(model, 'Deleted via DELETE request.')
+    return commit, model
 
 
 def get_config(request):  # pragma: no cover
