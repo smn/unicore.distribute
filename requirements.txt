@@ -1,0 +1,6 @@
+elastic-git>=1.0.0
+unicore.content>=1.0.2
+waitress
+pyramid
+pyramid-celery>=2.0.0rc4
+cornice==0.17
