@@ -19,4 +19,18 @@ Distribution tools for Universal Core content.
     :target: https://pypi.python.org/pypi/unicore.distribute
     :alt: Pypi Package
 
+Run with Docker
+===============
+
+::
+
+    $ docker run -dP sdehaan/unicore.distribute:latest
+    1cbc5ea16c08f9787c8d1546f21c489b27bab1c2fb63d7bb97c59565d1d4a2fa
+    $ docker port 1cbc5ea16c08
+    6543/tcp -> 0.0.0.0:49166
+    $ curl 0.0.0.0:49166/repos.json
+    []
+    $
+
 .. image:: docs/unicore.distribute.gif
+
