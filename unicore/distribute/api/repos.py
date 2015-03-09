@@ -2,7 +2,8 @@ import os
 
 from cornice.resource import resource, view
 
-from unicore.distribute.api.validators import validate_schema
+from unicore.distribute.api.validators import (
+    validate_schema, validate_clone_repo)
 from unicore.distribute.utils import (
     get_config, get_repositories, get_repository, format_repo,
     format_content_type, format_content_type_object,
@@ -19,6 +20,11 @@ class RepositoryResource(object):
     def collection_get(self):
         repo_path = self.config.get('repo.storage_path')
         return [format_repo(repo) for repo in get_repositories(repo_path)]
+
+    @view(renderer='json', validators=validate_clone_repo)
+    def collection_post(self):
+        repo_path = self.config.get('repo.storage_path')
+        request.repo = EG.clone_repo(repo_url, storage_path)
 
     @view(renderer='json')
     def get(self):
