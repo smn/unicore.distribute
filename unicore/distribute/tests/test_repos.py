@@ -3,6 +3,9 @@ from __future__ import absolute_import
 import json
 import os
 
+from cornice.errors import Errors
+
+from elasticgit import EG
 from elasticgit.tests.base import TestPerson, ModelBaseTest
 from elasticgit.commands.avro import serialize
 from elasticgit.utils import fqcn
@@ -33,11 +36,53 @@ class TestRepositoryResource(ModelBaseTest):
             'repo.storage_path': self.WORKING_DIR,
         })
 
-    def test_collection(self):
+    def test_collection_get(self):
         request = testing.DummyRequest({})
         resource = RepositoryResource(request)
         [repo_json] = resource.collection_get()
         self.assertEqual(repo_json, format_repo(self.workspace.repo))
+
+    def test_collection_post_success(self):
+        # NOTE: cloning to a different directory called `remote` because
+        #       the API is trying to clone into the same folder as the
+        #       tests: self.WORKING_DIR.
+        #
+        # FIXME: This is too error prone & tricky to reason about
+        api_repo_name = '%s_remote' % (self.id(),)
+        self.remote_workspace = self.mk_workspace(
+            working_dir=os.path.join(self.WORKING_DIR, 'remote'),
+            name=api_repo_name)
+        request = testing.DummyRequest({})
+        request.validated = {
+            'repo_url': self.remote_workspace.working_dir,
+        }
+        # Cleanup the repo created by the API on tear down
+        self.addCleanup(
+            lambda: EG.workspace(
+                os.path.join(
+                    self.WORKING_DIR, api_repo_name)).destroy())
+        request.route_url = lambda route, name: (
+            '/repos/%s.json' % (api_repo_name,))
+        request.errors = Errors()
+        resource = RepositoryResource(request)
+        resource.collection_post()
+        self.assertEqual(
+            request.response.headers['Location'],
+            '/repos/%s.json' % (api_repo_name,))
+        self.assertEqual(request.response.status_code, 301)
+
+    def test_collection_post_error(self):
+        request = testing.DummyRequest({})
+        request.validated = {
+            'repo_url': 'git://example.org/bar.git',
+        }
+        request.errors = Errors()
+        resource = RepositoryResource(request)
+        resource.collection_post()
+        [error] = request.errors
+        self.assertEqual(error['location'], 'body')
+        self.assertEqual(error['name'], 'repo_url')
+        self.assertTrue(error['description'])
 
     def test_get(self):
         request = testing.DummyRequest({})

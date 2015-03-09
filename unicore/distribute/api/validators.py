@@ -3,6 +3,8 @@ import json
 
 from avro.io import validate
 
+from colander import MappingSchema, SchemaNode, String, Invalid
+
 from unicore.distribute.utils import get_config, get_repository, get_schema
 
 
@@ -17,14 +19,14 @@ def validate_schema(request):
     data = json.loads(request.body)
 
     if not validate(schema, data):
-        request.errors.status = 403
+        request.errors.status = 400
         request.errors.add(
             'body',
             'schema',
             'Data does not match the schema for %s' % (content_type,)
         )
     elif uuid is not None and data['uuid'] != uuid:
-        request.errors.status = 403
+        request.errors.status = 400
         request.errors.add(
             'body',
             'uuid',
@@ -35,13 +37,12 @@ def validate_schema(request):
         request.schema_data = data
 
 
-def validate_clone_repo(request):
-    try:
-        data = json.loads(request.body)
-        request.repo_url = data['repo_url']
-    except (ValueError, KeyError), e:
-        request.errors.status = 403
-        request.errors.add(
-            'body',
-            'schema',
-            'Missing repo_url')
+def repo_url_type_schema_validator(node, value):
+    valid_prefixes = ['git://', 'http://', 'https://', 'ssh://']
+    if not any([value.startswith(prefix) for prefix in valid_prefixes]):
+        raise Invalid(node, '%r is not a valid repo_url' % (value,))
+
+
+class CreateRepoColanderSchema(MappingSchema):
+    repo_url = SchemaNode(
+        String(), location='body', validator=repo_url_type_schema_validator)
