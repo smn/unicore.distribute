@@ -2,10 +2,11 @@ import os
 
 from cornice.resource import resource, view
 
-
+from unicore.distribute.api.validators import validate_schema
 from unicore.distribute.utils import (
     get_config, get_repositories, get_repository, format_repo,
-    format_content_type, format_content_type_object)
+    format_content_type, format_content_type_object,
+    save_content_type_object, delete_content_type_object)
 
 
 @resource(collection_path='/repos.json', path='/repos/{name}.json')
@@ -42,6 +43,16 @@ class ContentTypeResource(object):
             get_repository(os.path.join(repo_path, name)),
             content_type)
 
+    @view(renderer='json', validators=validate_schema)
+    def put(self):
+        name = self.request.matchdict['name']
+        uuid = self.request.matchdict['uuid']
+        repo_path = self.config.get('repo.storage_path')
+        commit, model = save_content_type_object(
+            get_repository(os.path.join(repo_path, name)),
+            self.request.schema, uuid, self.request.schema_data)
+        return dict(model)
+
     @view(renderer='json')
     def get(self):
         name = self.request.matchdict['name']
@@ -51,3 +62,14 @@ class ContentTypeResource(object):
         return format_content_type_object(
             get_repository(os.path.join(repo_path, name)),
             content_type, uuid)
+
+    @view(renderer='json')
+    def delete(self):
+        name = self.request.matchdict['name']
+        content_type = self.request.matchdict['content_type']
+        uuid = self.request.matchdict['uuid']
+        repo_path = self.config.get('repo.storage_path')
+        commit, model = delete_content_type_object(
+            get_repository(os.path.join(repo_path, name)),
+            content_type, uuid)
+        return dict(model)
