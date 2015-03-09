@@ -24,7 +24,7 @@ Run with Docker
 
 ::
 
-    $ docker run -dP sdehaan/unicore.distribute:latest
+    $ docker run -dP universalcore/unicore.distribute:latest
     1cbc5ea16c08f9787c8d1546f21c489b27bab1c2fb63d7bb97c59565d1d4a2fa
     $ docker port 1cbc5ea16c08
     6543/tcp -> 0.0.0.0:49166
