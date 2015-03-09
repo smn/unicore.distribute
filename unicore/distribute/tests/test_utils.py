@@ -126,6 +126,6 @@ class TestRepositoryUtils(ModelBaseTest):
             schema_string, 'Writing the schema.')
         found_schema = get_schema(
             self.workspace.repo,
-            '%(namespace)s.%(name)s' % schema)
+            '%(namespace)s.%(name)s' % schema).to_json()
         self.assertEqual(found_schema['namespace'], schema['namespace'])
         self.assertEqual(found_schema['name'], schema['name'])

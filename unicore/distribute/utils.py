@@ -125,7 +125,8 @@ def get_schema(repo, content_type):
             os.path.join(repo.working_dir,
                          '_schemas',
                          '%s.avsc' % (content_type,)), 'r') as fp:
-            return avro.schema.parse(fp.read()).to_json()
+            data = fp.read()
+            return avro.schema.parse(data)
     except IOError:  # pragma: no cover
         raise NotFound('Schema does not exist.')
 
@@ -169,7 +170,7 @@ def format_content_type(repo, content_type):
     :returns: list
     """
     storage_manager = StorageManager(repo)
-    schema = get_schema(repo, content_type)
+    schema = get_schema(repo, content_type).to_json()
     model_class = deserialize(schema, module_name=schema['namespace'])
     return [dict(model_obj)
             for model_obj in storage_manager.iterate(model_class)]
@@ -188,11 +189,35 @@ def format_content_type_object(repo, content_type, uuid):
     """
     try:
         storage_manager = StorageManager(repo)
-        schema = get_schema(repo, content_type)
+        schema = get_schema(repo, content_type).to_json()
         model_class = deserialize(schema, module_name=schema['namespace'])
         return dict(storage_manager.get(model_class, uuid))
     except GitCommandError:
         raise NotFound('Object does not exist.')
+
+
+def save_content_type_object(repo, schema, uuid, data):
+    """
+    Save an object as a certain content type
+    """
+    storage_manager = StorageManager(repo)
+    model_class = deserialize(schema,
+                              module_name=schema['namespace'])
+    model = model_class(data)
+    commit = storage_manager.store(model, 'Updated via PUT request.')
+    return commit, model
+
+
+def delete_content_type_object(repo, content_type, uuid):
+    """
+    Delete an object of a certain content type
+    """
+    storage_manager = StorageManager(repo)
+    schema = get_schema(repo, content_type).to_json()
+    model_class = deserialize(schema, module_name=schema['namespace'])
+    model = storage_manager.get(model_class, uuid)
+    commit = storage_manager.delete(model, 'Deleted via DELETE request.')
+    return commit, model
 
 
 def get_config(request):  # pragma: no cover
