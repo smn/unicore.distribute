@@ -5,9 +5,12 @@ from elasticgit.commands.avro import serialize
 from elasticgit.tests.base import TestPerson, ModelBaseTest
 from elasticgit.utils import fqcn
 
+from colander import Invalid
+
 from cornice.errors import Errors
 
-from unicore.distribute.api.validators import validate_schema
+from unicore.distribute.api.validators import (
+    validate_schema, repo_url_type_schema_validator, CreateRepoColanderSchema)
 
 from pyramid import testing
 
@@ -73,3 +76,25 @@ class TestValidators(ModelBaseTest):
                 'location': 'body',
                 'name': 'uuid',
                 'description': 'Payload UUID does not match URL UUID.'}])
+
+    def test_repo_url_type_schema_validator(self):
+        self.assertRaises(
+            Invalid, repo_url_type_schema_validator, None, 'file://foo')
+        self.assertRaises(
+            Invalid, repo_url_type_schema_validator, None, '//foo')
+        self.assertRaises(
+            Invalid, repo_url_type_schema_validator, None, '..//foo')
+        self.assertEqual(
+            None, repo_url_type_schema_validator(None, 'http://foo/bar.git'))
+        self.assertEqual(
+            None, repo_url_type_schema_validator(None, 'https://foo/bar.git'))
+        self.assertEqual(
+            None, repo_url_type_schema_validator(None, 'ssh://foo/bar.git'))
+        self.assertEqual(
+            None, repo_url_type_schema_validator(None, 'git://foo/bar.git'))
+
+    def test_create_repo_colander_schema(self):
+        schema = CreateRepoColanderSchema()
+        valid = schema.deserialize({'repo_url': 'http://example.org/foo.git'})
+        self.assertEqual(valid, {'repo_url': 'http://example.org/foo.git'})
+        self.assertRaises(Invalid, schema.deserialize, {'repo_url': 'foo'})
