@@ -6,20 +6,63 @@
 Welcome to unicore.distribute's documentation!
 ==============================================
 
-Contents:
+unicore.distribute is a collection of APIs and tools for dealing with
+Universal Core content repositories.
 
-.. toctree::
-   :maxdepth: 2
+.. image:: https://travis-ci.org/universalcore/unicore.distribute.svg?branch=develop
+    :target: https://travis-ci.org/universalcore/unicore.distribute
+    :alt: Continuous Integration
+
+.. image:: https://coveralls.io/repos/universalcore/unicore.distribute/badge.png?branch=develop
+    :target: https://coveralls.io/r/universalcore/unicore.distribute?branch=develop
+    :alt: Code Coverage
+
+.. image:: https://readthedocs.org/projects/unicoredistribute/badge/?version=latest
+    :target: https://unicoredistribute.readthedocs.org
+    :alt: unicore.distribute Documentation
+
+.. image:: https://pypip.in/version/unicore.distribute/badge.svg
+    :target: https://pypi.python.org/pypi/unicore.distribute
+    :alt: Pypi Package
 
 
-.. services::
-   :modules: unicore.distribute.api.repos
+Installation
+============
+
+The recommended way to install this for development is to install
+it in a virtualenv_ but it's not necessary.
+
+.. code-block:: bash
+
+    pip install unicore.distribute
+
+Configuration
+=============
+
+Put the following in a file called ``development.ini``
+
+::
+
+    [app:main]
+    use = egg:unicore.distribute
+    repo.storage_path = repos/
+
+    [server:main]
+    use = egg:waitress#main
+    host = 0.0.0.0
+    port = 6543
+
+Running
+=======
+
+Clone a Universal Core content repository and run the server::
+
+    $ git https://github.com/smn/unicore-sample-content \
+        repos/unicore-sample-content
+    $ pserve development.ini
+    $ curl http://localhost:6543/repos.json
+
+.. image:: unicore.distribute.gif
 
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+.. _virtualenv: https://virtualenv.pypa.io/en/latest/
