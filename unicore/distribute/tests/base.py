@@ -30,7 +30,6 @@ class DistributeTestCase(TestCase):
             self.addCleanup(workspace.destroy)
 
         workspace.setup(author_name, author_email)
-        workspace
         while not workspace.index_ready():
             pass
 
