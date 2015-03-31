@@ -2,4 +2,4 @@
 
 set -e
 
-$PIP install -e $INSTALLDIR/$NAME
+$PIP install -e $INSTALLDIR/$REPO
