@@ -7,3 +7,4 @@
 /docs/_build/
 /htmlcov/
 *.DS_Store
+unicore.distribute.db
