@@ -1,4 +1,5 @@
-from colander import MappingSchema, SchemaNode, String, Invalid, Boolean
+from colander import (
+    MappingSchema, SchemaNode, String, Invalid, Boolean, OneOf, url)
 
 from cornice.resource import resource, view
 
@@ -6,16 +7,11 @@ from unicore.distribute.utils import get_config
 from unicore.distribute.webhooks.models import DBSession, Webhook
 
 
-def url_type_validator(node, value):
-    valid_prefixes = ['http://', 'https://']
-    if not any([value.startswith(prefix) for prefix in valid_prefixes]):
-        raise Invalid(node, '%r does not look like a valid url' % (value,))
-
-
 class CreateWebhookSchema(MappingSchema):
-    url = SchemaNode(String(),
-                     location='body', validator=url_type_validator)
-    event_type = SchemaNode(String(), location='body')
+    url = SchemaNode(String(), location='body', validator=url)
+    event_type = SchemaNode(
+        String(), location='body',
+        validator=OneOf([value for value, label in Webhook.TYPES]))
     active = SchemaNode(Boolean(), location='body')
 
 
