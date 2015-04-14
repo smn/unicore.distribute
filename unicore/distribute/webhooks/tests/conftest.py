@@ -26,7 +26,7 @@ def appsettings(request):
 @pytest.fixture(scope='session')
 def sqlengine(request, appsettings):
     engine = engine_from_config(appsettings, 'sqlalchemy.')
-    DBSession.configure(bind=engine)
+    DBSession.configure(bind=engine, expire_on_commit=False)
     Base.metadata.create_all(engine)
 
     def teardown():
@@ -40,7 +40,7 @@ def sqlengine(request, appsettings):
 def dbtransaction(request, sqlengine):
     connection = sqlengine.connect()
     transaction = connection.begin()
-    DBSession.configure(bind=connection)
+    DBSession.configure(bind=connection, expire_on_commit=False)
 
     def teardown():
         transaction.rollback()
