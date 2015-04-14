@@ -13,7 +13,7 @@ install:
 script:
   - flake8 unicore
   - py.test --cov unicore unicore/distribute/api
-  - py.test --cov --ini=test.ini unicore unicore/distribute/webhooks
+  - py.test --cov unicore --ini=test.ini unicore unicore/distribute/webhooks
 after_success:
   - coveralls
 deploy:
