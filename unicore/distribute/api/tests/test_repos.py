@@ -10,9 +10,12 @@ from elasticgit.tests.base import TestPerson, ModelBaseTest
 from elasticgit.commands.avro import serialize
 from elasticgit.utils import fqcn
 
+from git.exc import GitCommandError
+
 from pyramid import testing
 from pyramid.exceptions import NotFound
 
+from mock import patch
 import avro
 
 from unicore.distribute.api.repos import (
@@ -71,7 +74,10 @@ class TestRepositoryResource(ModelBaseTest):
             '/repos/%s.json' % (api_repo_name,))
         self.assertEqual(request.response.status_code, 301)
 
-    def test_collection_post_error(self):
+    @patch.object(EG, 'clone_repo')
+    def test_collection_post_error(self, mock_method):
+        mock_method.side_effect = GitCommandError(
+            'git clone', 'Boom!', stderr='mocked response')
         request = testing.DummyRequest({})
         request.validated = {
             'repo_url': 'git://example.org/bar.git',
@@ -82,7 +88,7 @@ class TestRepositoryResource(ModelBaseTest):
         [error] = request.errors
         self.assertEqual(error['location'], 'body')
         self.assertEqual(error['name'], 'repo_url')
-        self.assertTrue(error['description'])
+        self.assertEqual(error['description'], 'mocked response')
 
     def test_get(self):
         request = testing.DummyRequest({})
