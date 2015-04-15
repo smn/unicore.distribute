@@ -35,4 +35,4 @@ def fire_event(event):
                Webhook.event_type == event.event_type)
 
     for webhook in webhooks:
-        print 'firing webhook: %s' % (webhook,)
+        print 'firing webhook: %s' % (webhook.url,)

@@ -8,6 +8,8 @@ from pyramid.view import view_config
 
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
+import transaction
+
 from unicore.distribute.utils import get_config
 from unicore.distribute.webhooks.models import DBSession, Webhook
 from unicore.distribute.webhooks.events import (
@@ -57,6 +59,7 @@ class WebhooksResource(object):
             one()
         data = webhook.to_dict()
         DBSession.delete(webhook)
+        transaction.commit()
         self.request.registry.notify(WebhookDeleted(webhook, self.request))
         return data
 
@@ -69,9 +72,11 @@ class WebhooksResource(object):
                           url=url,
                           event_type=event_type,
                           active=active)
+        data = webhook.to_dict()
         DBSession.add(webhook)
+        transaction.commit()
         self.request.registry.notify(WebhookCreated(webhook, self.request))
-        return webhook.to_dict()
+        return data
 
     @view(renderer='json', schema=WebhookSchema)
     def put(self):
@@ -81,5 +86,6 @@ class WebhooksResource(object):
         webhook.url = self.request.validated['url']
         webhook.event_type = self.request.validated['event_type']
         webhook.active = self.request.validated['active']
+        transaction.commit()
         self.request.registry.notify(WebhookUpdated(webhook, self.request))
         return webhook.to_dict()
