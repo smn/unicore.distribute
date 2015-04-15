@@ -38,19 +38,19 @@ class WebhooksResource(object):
             filter(Webhook.owner == request.authenticated_userid)
         self.config = get_config(request)
 
-    # @view(renderer='json')
+    @view(renderer='json')
     def collection_get(self):
         return [webhook.to_dict()
                 for webhook in self.webhooks.all()]
 
-    # @view(renderer='json')
+    @view(renderer='json')
     def get(self):
         return self.webhooks. \
             filter(Webhook.uuid == self.request.matchdict['uuid']). \
             one(). \
             to_dict()
 
-    # @view(renderer='json')
+    @view(renderer='json')
     def delete(self):
         webhook = self.webhooks. \
             filter(Webhook.uuid == self.request.matchdict['uuid']). \
@@ -60,7 +60,7 @@ class WebhooksResource(object):
         self.request.registry.notify(WebhookDeleted(webhook, self.request))
         return data
 
-    # @view(renderer='json', schema=WebhookSchema)
+    @view(renderer='json', schema=WebhookSchema)
     def post(self):
         url = self.request.validated['url']
         event_type = self.request.validated['event_type']
@@ -73,7 +73,7 @@ class WebhooksResource(object):
         self.request.registry.notify(WebhookCreated(webhook, self.request))
         return webhook.to_dict()
 
-    # @view(renderer='json', schema=WebhookSchema)
+    @view(renderer='json', schema=WebhookSchema)
     def put(self):
         webhook = self.webhooks. \
             filter(Webhook.uuid == self.request.matchdict['uuid']). \
