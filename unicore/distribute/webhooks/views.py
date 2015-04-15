@@ -10,6 +10,8 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from unicore.distribute.utils import get_config
 from unicore.distribute.webhooks.models import DBSession, Webhook
+from unicore.distribute.webhooks.events import (
+    WebhookDeleted, WebhookCreated, WebhookUpdated)
 
 
 class WebhookSchema(MappingSchema):
@@ -55,6 +57,7 @@ class WebhooksResource(object):
             one()
         data = webhook.to_dict()
         DBSession.delete(webhook)
+        self.request.registry.notify(WebhookDeleted(webhook, self.request))
         return data
 
     @view(renderer='json', schema=WebhookSchema)
@@ -67,6 +70,7 @@ class WebhooksResource(object):
                           event_type=event_type,
                           active=active)
         DBSession.add(webhook)
+        self.request.registry.notify(WebhookCreated(webhook, self.request))
         return webhook.to_dict()
 
     @view(renderer='json', schema=WebhookSchema)
@@ -77,4 +81,5 @@ class WebhooksResource(object):
         webhook.url = self.request.validated['url']
         webhook.event_type = self.request.validated['event_type']
         webhook.active = self.request.validated['active']
+        self.request.registry.notify(WebhookUpdated(webhook, self.request))
         return webhook.to_dict()
