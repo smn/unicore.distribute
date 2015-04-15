@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from pyramid.threadlocal import get_current_registry
 
-from sqlalchemy import Column, UnicodeText, Boolean
+from sqlalchemy import Column, UnicodeText, Boolean, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
 
@@ -22,6 +22,9 @@ def get_key(*args):
 
 class Webhook(Base):
     __tablename__ = 'webhooks'
+    __table_args__ = (
+        UniqueConstraint('owner', 'uuid'),
+    )
 
     TYPES = (
         ('repo.push', 'Repository Push'),
