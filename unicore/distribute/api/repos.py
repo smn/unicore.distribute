@@ -37,6 +37,7 @@ class RepositoryResource(object):
             self.request.response.headers['Location'] = self.request.route_url(
                 'repositoryresource', name=repo_name)
             self.request.response.status = 301
+            return ''
         except (GitCommandError,), e:
             self.request.errors.status = 400
             self.request.errors.add(
