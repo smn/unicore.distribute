@@ -150,7 +150,7 @@ class AnonymousWebhookTestCase(ModelTestCase):
         self.assertEqual(webhook['event_type'], u'repo.push')
         self.assertEqual(webhook['active'], True)
 
-    def test_post(self):
+    def test_collection_post(self):
         self.assertEqual(DBSession.query(Webhook).count(), 1)
         request = testing.DummyRequest()
         request.validated = {
@@ -159,7 +159,7 @@ class AnonymousWebhookTestCase(ModelTestCase):
             'active': True,
         }
         resource = views.WebhooksResource(request)
-        webhook = resource.post()
+        webhook = resource.collection_post()
         self.assertEqual(DBSession.query(Webhook).count(), 2)
         count = DBSession.query(Webhook). \
             filter(Webhook.uuid == webhook['uuid']). \

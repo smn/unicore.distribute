@@ -61,7 +61,7 @@ class WebhooksResource(object):
         return data
 
     @view(renderer='json', schema=WebhookSchema)
-    def post(self):
+    def collection_post(self):
         url = self.request.validated['url']
         event_type = self.request.validated['event_type']
         active = self.request.validated['active']

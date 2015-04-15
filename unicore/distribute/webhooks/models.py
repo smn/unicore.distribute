@@ -41,6 +41,6 @@ class Webhook(Base):
             'uuid': self.uuid.hex,
             'owner': self.owner,
             'url': self.url,
-            'event_type': self.event_type,
+            'event_type': self.event_type.code,
             'active': self.active,
         }
