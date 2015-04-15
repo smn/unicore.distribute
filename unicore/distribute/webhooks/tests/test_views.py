@@ -4,11 +4,15 @@ import pytest
 import transaction
 
 from pyramid import testing
+
 from sqlalchemy.orm.exc import NoResultFound
+
+from webtest import TestApp
 
 from unicore.distribute.webhooks.models import (
     DBSession, Webhook)
 from unicore.distribute.webhooks import views
+from unicore.distribute.webhooks import main
 
 
 @pytest.mark.usefixtures("dbtransaction")
