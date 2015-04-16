@@ -15,15 +15,12 @@ from git.exc import GitCommandError
 
 from pyramid import testing
 from pyramid.exceptions import NotFound
-from pyramid.events import subscriber
 
-from mock import Mock
 from mock import patch
 import avro
 
 from unicore.distribute.api.repos import (
     RepositoryResource, ContentTypeResource)
-from unicore.webhooks.events import WebhookEvent
 from unicore.distribute.utils import (
     format_repo, format_content_type, format_content_type_object)
 
