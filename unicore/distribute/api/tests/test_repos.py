@@ -6,6 +6,7 @@ import os
 from cornice.errors import Errors
 
 from elasticgit import EG
+from elasticgit.storage import StorageManager
 from elasticgit.tests.base import TestPerson, ModelBaseTest
 from elasticgit.commands.avro import serialize
 from elasticgit.utils import fqcn
@@ -14,12 +15,15 @@ from git.exc import GitCommandError
 
 from pyramid import testing
 from pyramid.exceptions import NotFound
+from pyramid.events import subscriber
 
+from mock import Mock
 from mock import patch
 import avro
 
 from unicore.distribute.api.repos import (
     RepositoryResource, ContentTypeResource)
+from unicore.webhooks.events import WebhookEvent
 from unicore.distribute.utils import (
     format_repo, format_content_type, format_content_type_object)
 
@@ -107,6 +111,28 @@ class TestRepositoryResource(ModelBaseTest):
         }
         resource = RepositoryResource(request)
         self.assertRaises(NotFound, resource.get)
+
+    @patch.object(StorageManager, 'pull')
+    def test_post(self, mock_pull):
+        request = testing.DummyRequest({})
+        request.route_url = lambda route, name: 'foo'
+        repo_name = os.path.basename(self.workspace.working_dir)
+        request.matchdict = {
+            'name': repo_name,
+        }
+        resource = RepositoryResource(request)
+
+        with patch.object(request.registry, 'notify') as mocked_notify:
+            resource.post()
+            mock_pull.assert_called_with(branch_name='master')
+            (call,) = mocked_notify.call_args_list
+            (args, kwargs) = call
+            (event,) = args
+            self.assertEqual(event.event_type, 'repo.push')
+            self.assertEqual(event.payload, {
+                'repo': repo_name,
+                'url': 'foo',
+            })
 
 
 class TestContentTypeResource(ModelBaseTest):
