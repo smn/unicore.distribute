@@ -7,7 +7,7 @@ from elasticgit.storage import StorageManager
 
 from unicore.distribute.api.validators import (
     validate_schema, CreateRepoColanderSchema)
-from unicore.distribute.webhooks.events import WebhookEvent
+from unicore.webhooks.events import WebhookEvent
 from unicore.distribute.utils import (
     get_config, get_repositories, get_repository, format_repo,
     format_content_type, format_content_type_object,

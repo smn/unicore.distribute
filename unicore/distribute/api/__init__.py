@@ -10,12 +10,3 @@ def main(global_config, **settings):
 def includeme(config):
     config.include('cornice')
     config.scan()
-
-    # Dynamically load any stuff that's optionally included.
-    settings = config.registry.settings
-    api_includes = filter(
-        lambda line: not line.startswith(';'),
-        settings.get('unicore.distribute.includes', '').strip().split('\n'))
-
-    for include in api_includes:
-        config.include(include)

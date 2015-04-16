@@ -3,6 +3,7 @@ unicore.content>=1.0.2
 waitress
 pyramid
 pyramid-celery>=2.0.0rc4
+pyramid_tm
 cornice==1.0.0
 colander==1.0
 sqlalchemy==1.0.0b5
@@ -10,3 +11,4 @@ zope.sqlalchemy==0.7.6
 alembic==0.7.5.post2
 SQLAlchemy-Utils==0.29.9
 cryptography==0.8.1
+requests
