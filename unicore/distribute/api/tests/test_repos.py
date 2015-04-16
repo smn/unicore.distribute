@@ -6,13 +6,17 @@ import os
 from cornice.errors import Errors
 
 from elasticgit import EG
+from elasticgit.storage import StorageManager
 from elasticgit.tests.base import TestPerson, ModelBaseTest
 from elasticgit.commands.avro import serialize
 from elasticgit.utils import fqcn
 
+from git.exc import GitCommandError
+
 from pyramid import testing
 from pyramid.exceptions import NotFound
 
+from mock import patch
 import avro
 
 from unicore.distribute.api.repos import (
@@ -71,7 +75,10 @@ class TestRepositoryResource(ModelBaseTest):
             '/repos/%s.json' % (api_repo_name,))
         self.assertEqual(request.response.status_code, 301)
 
-    def test_collection_post_error(self):
+    @patch.object(EG, 'clone_repo')
+    def test_collection_post_error(self, mock_method):
+        mock_method.side_effect = GitCommandError(
+            'git clone', 'Boom!', stderr='mocked response')
         request = testing.DummyRequest({})
         request.validated = {
             'repo_url': 'git://example.org/bar.git',
@@ -82,7 +89,7 @@ class TestRepositoryResource(ModelBaseTest):
         [error] = request.errors
         self.assertEqual(error['location'], 'body')
         self.assertEqual(error['name'], 'repo_url')
-        self.assertTrue(error['description'])
+        self.assertEqual(error['description'], 'mocked response')
 
     def test_get(self):
         request = testing.DummyRequest({})
@@ -101,6 +108,28 @@ class TestRepositoryResource(ModelBaseTest):
         }
         resource = RepositoryResource(request)
         self.assertRaises(NotFound, resource.get)
+
+    @patch.object(StorageManager, 'pull')
+    def test_post(self, mock_pull):
+        request = testing.DummyRequest({})
+        request.route_url = lambda route, name: 'foo'
+        repo_name = os.path.basename(self.workspace.working_dir)
+        request.matchdict = {
+            'name': repo_name,
+        }
+        resource = RepositoryResource(request)
+
+        with patch.object(request.registry, 'notify') as mocked_notify:
+            resource.post()
+            mock_pull.assert_called_with(branch_name='master')
+            (call,) = mocked_notify.call_args_list
+            (args, kwargs) = call
+            (event,) = args
+            self.assertEqual(event.event_type, 'repo.push')
+            self.assertEqual(event.payload, {
+                'repo': repo_name,
+                'url': 'foo',
+            })
 
 
 class TestContentTypeResource(ModelBaseTest):

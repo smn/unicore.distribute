@@ -62,7 +62,60 @@ Clone a Universal Core content repository and run the server::
     $ pserve development.ini
     $ curl http://localhost:6543/repos.json
 
+It is also possible the clone a repository directly from the API::
+
+    $ curl -XPOST -H 'Content-Type: application/json' \
+        -d '{"repo_url": "https://example.com/repo.git"}' \
+        http://localhost:6543/repos.json
+
 .. image:: unicore.distribute.gif
+
+Querying
+========
+
+The individual repositories are all exposed via the ``repos.json`` base path.
+Let's step through the process of cloning a repository and then querying
+the data via the web interface::
+
+    $ curl -XPOST -H 'Content-Type: application/json' \
+        -d '{"repo_url": "https://github.com/smn/unicore-sample-content.git"}' \
+        http://localhost:6543/repos.json
+
+Now ``repos/unicore-sample-content.json`` accessible via the API and exposes
+the schema and some metadata about the content.
+
+.. image:: images/repos_json_metadata.jpg
+
+The ``schema`` key in the repository object has an Avro_ schema representing
+the content. This allows one to automatically generate model definitions to
+work with the data.
+
+.. image:: images/repos_json_schema.jpg
+
+Now that we have a list of all object types in the content repository we can
+get listings of these models:
+
+.. image:: images/repos_json_object_index.jpg
+
+Or we can get an individual object by requesting it by its UUID:
+
+.. image:: images/repos_json_object_get.jpg
+
+URL structure
+=============
+
+The following URLs are created::
+
+    http://localhost:6543/repos.json [GET, POST]
+    http://localhost:6543/repos/<repo-name>.json [GET]
+    http://localhost:6543/repos/<repo-name>/<content-type>.json [GET]
+    http://localhost:6543/repos/<repo-name>/<content-type>/<uuid>.json [GET, PUT, DELETE]
+
+.. note::
+
+    The PUT and DELETE methods only operate on the local repository, the
+    are not pushed up to the upstream repository that was cloned.
 
 
 .. _virtualenv: https://virtualenv.pypa.io/en/latest/
+.. _Avro: avro.apache.org/docs/1.7.7/spec.html

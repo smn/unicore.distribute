@@ -5,4 +5,5 @@ python-slugify
 Sphinx
 sphinx_rtd_theme
 webtest
+mock
 -e .
