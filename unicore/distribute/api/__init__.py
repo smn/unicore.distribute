@@ -9,4 +9,4 @@ def main(global_config, **settings):
 
 def includeme(config):
     config.include('cornice')
-    config.scan('unicore.distribute.api.repos')
+    config.scan()
