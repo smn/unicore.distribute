@@ -5,4 +5,5 @@ pip:
 dependencies:
  - git
  - libffi-dev
+ - libssl-dev
 
