@@ -68,7 +68,42 @@ It is also possible the clone a repository directly from the API::
         -d '{"repo_url": "https://example.com/repo.git"}' \
         http://localhost:6543/repos.json
 
-.. image:: unicore.distribute.gif
+Webhooks
+========
+
+The application can notify you when it is notified of changes made to
+the upstream repository::
+
+Make sure the lines in ``development.ini`` relating to ``unicore.webhooks``
+are uncommented and then initialize the database::
+
+    $ alembic upgread head
+
+Now your database is configured and you can store Webhooks::
+
+    $ curl -XPOST \
+        -H 'Content-Type: application/json' \
+        -d '{"event_type": "repo.push", "url": "http://requestb.in/vystj5vy", "active": true}' \
+        http://localhost:6543/hooks
+    {
+        "uuid": "09b901ccc5094f1a89f8bd03165fe3d6",
+        "owner": null,
+        "url": "http://requestb.in/vystj5vy",
+        "event_type": "repo.push",
+        "active": true
+    }
+
+.. note:: Currently the only ``event_type`` supported is ``repo.push``
+
+Now if we notify the API of changes being made upstream (say via GitHub's webhooks)
+we will now relay that all webhooks registered::
+
+    $ curl -XPOST http://localhost:6543/repos/unicore-sample-content.json
+
+Here is the request made to the registered URL with the JSON payload:
+
+.. image:: images/requestbin.jpg
+
 
 Querying
 ========
