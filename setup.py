@@ -35,4 +35,7 @@ setup(name='unicore.distribute',
       tests_require=requires,
       entry_points={
           'paste.app_factory': ['main = unicore.distribute.api:main'],
+          'console_scripts': [
+              'unicore.distribute = unicore.distribute.scripts:main',
+          ]
       })

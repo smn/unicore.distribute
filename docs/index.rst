@@ -104,6 +104,45 @@ Here is the request made to the registered URL with the JSON payload:
 
 .. image:: images/requestbin.jpg
 
+Polling
+=======
+
+Unicore.distribute ships with a command line program::
+
+    $ unicore.distribute --help
+    usage: unicore.distribute [-h] {poll-repositories} ...
+
+    unicore.distribute command line tools.
+
+    positional arguments:
+      {poll-repositories}  Commands
+        poll-repositories  poll repositories
+
+    optional arguments:
+      -h, --help           show this help message and exit
+
+The only feature currently available is one which can be used to poll
+repositories at a regular interval to see if new content has arrived.
+If that is the case then an event is fired and the registered webhook URLs
+are called::
+
+    $ unicore.distribute poll-repositories --help
+    usage: unicore.distribute poll-repositories [-h] [-d REPO_DIR] [-i INI_FILE]
+                                            [-u BASE_URL]
+
+    optional arguments:
+        -h, --help            show this help message and exit
+        -d REPO_DIR, --repo-dir REPO_DIR
+                              The directory with repositories.
+        -i INI_FILE, --ini-file INI_FILE
+                              The project's ini file.
+        -u BASE_URL, --base-url BASE_URL
+                              This server's public URL (for webhooks)
+
+Hook up the ``poll-repositories`` sub-command to cron for regular polling::
+
+    */15 * * * * unicore.distribute poll-repositories -d /var/praekelt/repos/ -i development.ini -u http://unicore.io
+
 
 Querying
 ========
