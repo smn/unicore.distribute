@@ -27,11 +27,15 @@ class PollRepositories(object):
 
     def pull_repo(self, env, repo):
         sm = StorageManager(repo)
-        remote = repo.remotes[0]
         branch = repo.active_branch
+        tracking_branch = branch.tracking_branch()
+        if tracking_branch:
+            remote_name = tracking_branch.remote_name
+        else:
+            remote_name = repo.remotes[0].name
         original_commit = branch.commit
         sm.pull(branch_name=branch.name,
-                remote_name=remote.name)
+                remote_name=remote_name)
         last_commit = branch.commit
         if original_commit.hexsha != last_commit.hexsha:
             name = os.path.basename(repo.working_dir)
