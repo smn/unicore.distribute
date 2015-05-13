@@ -11,10 +11,8 @@ class Proxy(object):
 
     def __call__(self, request):
         view = ProxyView(request, self.upstream_url)
-        handler = getattr(view, 'do_%s' % (request.method,), None)
-        if handler:
-            return handler()
-        return HTTPNotFound()
+        handler = getattr(view, 'do_%s' % (request.method,), HTTPNotFound)
+        return handler()
 
 
 class ProxyView(object):
