@@ -19,6 +19,7 @@ class ProxyView(object):
 
     def __init__(self, request, upstream_url):
         self.request = request
+        self.requests_handler = requests.request
         self.upstream_url = upstream_url
 
     def url(self):
@@ -32,7 +33,7 @@ class ProxyView(object):
 
     def mk_request(self):
         return self.mk_response(
-            requests.request(
+            self.requests_handler(
                 self.request.method, self.url(), data=self.request.body))
 
     def do_POST(self):
