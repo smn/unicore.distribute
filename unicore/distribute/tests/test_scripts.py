@@ -70,10 +70,11 @@ class TestScripts(ToolBaseTest):
         (args, kwargs) = call
         (event,) = args
         name = os.path.basename(self.workspace.working_dir)
+        url = env['request'].route_url('repositoryresource', name=name)
+        self.assertTrue('http://example.org' in url)
         self.assertEqual(event.owner, None)
         self.assertEqual(event.event_type, 'repo.push')
         self.assertEqual(event.payload, {
             'repo': name,
-            'url': env['request'].route_url(
-                'repositoryresource', name=name)
+            'url': url,
         })
