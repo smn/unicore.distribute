@@ -12,5 +12,12 @@ def main(global_config, **settings):
 def includeme(config):
     config.include('cornice')
     config.scan('.repos')
-    config.add_route('esapi', '/esapi/{parts:.*}')
-    config.add_view(proxy.Proxy('http://localhost:9200/'), route_name='esapi')
+
+    settings = config.registry.settings
+    proxy_enabled = settings.get('proxy.enabled', 'false').lower()
+    proxy_path = settings.get('proxy.path', 'esapi')
+    proxy_upstream = settings.get('proxy.upstream', 'http://localhost:9200/')
+
+    if proxy_enabled == 'true':
+        config.add_route('esapi', '/%s/{parts:.*}' % (proxy_path,))
+        config.add_view(proxy.Proxy(proxy_upstream), route_name='esapi')
