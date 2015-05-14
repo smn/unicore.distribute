@@ -10,12 +10,6 @@ from unicore.distribute.api.proxy import ProxyView, Proxy
 
 class TestProxy(TestCase):
 
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
     def mk_proxy_view(self,
                       url='http://example.org',
                       method='GET',
