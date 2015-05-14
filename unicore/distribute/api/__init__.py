@@ -18,6 +18,6 @@ def includeme(config):
     proxy_path = settings.get('proxy.path', 'esapi')
     proxy_upstream = settings.get('proxy.upstream', 'http://localhost:9200/')
 
-    if proxy_enabled != 'true':  # pragma: no cover
+    if proxy_enabled == 'true':  # pragma: no cover
         config.add_route('esapi', '/%s/{parts:.*}' % (proxy_path,))
         config.add_view(proxy.Proxy(proxy_upstream), route_name='esapi')
