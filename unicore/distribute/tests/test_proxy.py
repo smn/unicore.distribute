@@ -16,7 +16,8 @@ class TestProxy(TestCase):
     def tearDown(self):
         pass
 
-    def mk_proxy_view(self, url,
+    def mk_proxy_view(self,
+                      url='http://example.org',
                       method='GET',
                       response_content='',
                       content_type='application/json',
@@ -46,28 +47,34 @@ class TestProxy(TestCase):
         self.assertTrue(isinstance(proxy_view, ProxyView))
 
     def test_do_POST(self):
-        self.assertEqual(
-            self.mk_proxy_request('POST', response_content='foo').body,
-            'foo')
+        proxy_view = self.mk_proxy_view(method='POST')
+        proxy_view.do_POST()
+        proxy_view.requests_handler.assert_called_with(
+            'POST', 'http://example.org', data='')
 
     def test_do_GET(self):
-        self.assertEqual(
-            self.mk_proxy_request('GET', response_content='foo').body,
-            'foo')
+        proxy_view = self.mk_proxy_view(method='GET')
+        proxy_view.do_GET()
+        proxy_view.requests_handler.assert_called_with(
+            'GET', 'http://example.org', data='')
 
     def test_do_DELETE(self):
-        self.assertEqual(
-            self.mk_proxy_request('DELETE', response_content='foo').body,
-            'foo')
+        proxy_view = self.mk_proxy_view(method='DELETE')
+        proxy_view.do_DELETE()
+        proxy_view.requests_handler.assert_called_with(
+            'DELETE', 'http://example.org', data='')
 
     def test_do_PUT(self):
-        self.assertEqual(
-            self.mk_proxy_request('PUT', response_content='foo').body,
-            'foo')
+        proxy_view = self.mk_proxy_view(method='PUT')
+        proxy_view.do_PUT()
+        proxy_view.requests_handler.assert_called_with(
+            'PUT', 'http://example.org', data='')
 
     def test_do_HEAD(self):
-        self.assertEqual(
-            self.mk_proxy_request('HEAD', response_content='').body, '')
+        proxy_view = self.mk_proxy_view(method='HEAD')
+        proxy_view.do_HEAD()
+        proxy_view.requests_handler.assert_called_with(
+            'HEAD', 'http://example.org', data='')
 
     def test_unsupported_methods(self):
         request = Request.blank(
