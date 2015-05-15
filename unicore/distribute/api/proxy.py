@@ -19,11 +19,13 @@ class ProxyView(object):
 
     def __init__(self, request, upstream_url):
         self.request = request
-        self.requests_handler = requests.request
         self.upstream_url = upstream_url
 
     def url(self):
         return '%s%s' % (self.upstream_url, self.request.matchdict['parts'])
+
+    def mk_request(self, *args, **kwargs):  # for mocking
+        return requests.request(*args, **kwargs)
 
     def mk_response(self, response):
         return Response(body=response.text, status=response.status_code,
@@ -31,22 +33,22 @@ class ProxyView(object):
                         content_type=response.headers['Content-Type'],
                         charset=response.encoding)
 
-    def mk_request(self):
+    def do_request(self):
         return self.mk_response(
-            self.requests_handler(
+            self.mk_request(
                 self.request.method, self.url(), data=self.request.body))
 
     def do_POST(self):
-        return self.mk_request()
+        return self.do_request()
 
     def do_DELETE(self):
-        return self.mk_request()
+        return self.do_request()
 
     def do_PUT(self):
-        return self.mk_request()
+        return self.do_request()
 
     def do_GET(self):
-        return self.mk_request()
+        return self.do_request()
 
     def do_HEAD(self):
-        return self.mk_request()
+        return self.do_request()

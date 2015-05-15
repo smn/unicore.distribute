@@ -1,11 +1,15 @@
 from unittest import TestCase
 
-from mock import Mock
+from mock import Mock, patch
 
+from pyramid import testing
 from pyramid.request import Request
+from webtest import TestApp
+
 from requests.models import Response
 
 from unicore.distribute.api.proxy import ProxyView, Proxy
+from unicore.distribute.api import main
 
 
 class TestProxy(TestCase):
@@ -28,7 +32,7 @@ class TestProxy(TestCase):
         response.encoding = encoding
         mock = Mock()
         mock.return_value = response
-        proxy_view.requests_handler = mock
+        proxy_view.mk_request = mock
         return proxy_view
 
     def mk_proxy_request(self, method, response_content=''):
@@ -43,31 +47,31 @@ class TestProxy(TestCase):
     def test_do_POST(self):
         proxy_view = self.mk_proxy_view(method='POST')
         proxy_view.do_POST()
-        proxy_view.requests_handler.assert_called_with(
+        proxy_view.mk_request.assert_called_with(
             'POST', 'http://example.org', data='')
 
     def test_do_GET(self):
         proxy_view = self.mk_proxy_view(method='GET')
         proxy_view.do_GET()
-        proxy_view.requests_handler.assert_called_with(
+        proxy_view.mk_request.assert_called_with(
             'GET', 'http://example.org', data='')
 
     def test_do_DELETE(self):
         proxy_view = self.mk_proxy_view(method='DELETE')
         proxy_view.do_DELETE()
-        proxy_view.requests_handler.assert_called_with(
+        proxy_view.mk_request.assert_called_with(
             'DELETE', 'http://example.org', data='')
 
     def test_do_PUT(self):
         proxy_view = self.mk_proxy_view(method='PUT')
         proxy_view.do_PUT()
-        proxy_view.requests_handler.assert_called_with(
+        proxy_view.mk_request.assert_called_with(
             'PUT', 'http://example.org', data='')
 
     def test_do_HEAD(self):
         proxy_view = self.mk_proxy_view(method='HEAD')
         proxy_view.do_HEAD()
-        proxy_view.requests_handler.assert_called_with(
+        proxy_view.mk_request.assert_called_with(
             'HEAD', 'http://example.org', data='')
 
     def test_unsupported_methods(self):
@@ -78,3 +82,18 @@ class TestProxy(TestCase):
         proxy = Proxy('http://example.org')
         resp = proxy(request)
         self.assertEqual(resp.status_code, 404)
+
+    @patch.object(ProxyView, 'mk_request')
+    def test_proxy_setup(self, mocked_request):
+        response = Response()
+        response.headers['Content-Type'] = 'application/text'
+        response._content = 'hello world'
+        response.encoding = 'utf-8'
+        mocked_request.return_value = response
+        settings = {'proxy.enabled': 'true'}
+        config = testing.setUp(settings=settings)
+        app = TestApp(main({}, **settings))
+        response = app.get('/esapi/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers['content-type'], 'application/text')
+        self.assertEqual(response.body, 'hello world')
