@@ -91,7 +91,7 @@ class TestProxy(TestCase):
         response.encoding = 'utf-8'
         mocked_request.return_value = response
         settings = {'proxy.enabled': 'true'}
-        config = testing.setUp(settings=settings)
+        testing.setUp(settings=settings)
         app = TestApp(main({}, **settings))
         response = app.get('/esapi/')
         self.assertEqual(response.status_code, 200)
