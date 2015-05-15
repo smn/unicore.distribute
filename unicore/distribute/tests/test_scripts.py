@@ -12,7 +12,7 @@ from unicore.distribute.scripts import PollRepositories
 
 from elasticgit.tests.base import TestPerson
 
-from mock import Mock
+from mock import Mock, patch
 
 
 class TestScripts(ToolBaseTest):
@@ -33,6 +33,35 @@ class TestScripts(ToolBaseTest):
             'origin', self.remote_workspace.working_dir)
         self.workspace.fast_forward()
 
+    def mk_inifile(self, data):
+        cp = ConfigParser()
+        for section, key_data in data.items():
+            cp.add_section(section)
+            for key, value in key_data.items():
+                cp.set(section, key, value)
+
+        sio = StringIO()
+        cp.write(sio)
+
+        tmp_ini_data = sio.getvalue()
+        tmp_ini_file = self.mk_tempfile(tmp_ini_data)
+        return tmp_ini_file
+
+    @patch.object(PollRepositories, 'pull_repo')
+    def test_run(self, mocked_pull_repo):
+        pr = PollRepositories()
+        pr.run(self.WORKING_DIR, self.mk_inifile({
+            'app:main': {
+                'use': 'egg:unicore.distribute',
+                'repo.storage_path': self.WORKING_DIR,
+            }
+        }), 'http://www.example.org')
+        mocked_pull_repo.assert_called()
+        (ws_call, remote_ws_call) = mocked_pull_repo.call_args_list
+        (args, kwargs) = ws_call
+        (env, repo) = args
+        self.assertEqual(repo, self.workspace.repo)
+
     def test_pull_repo(self):
 
         from pyramid.events import subscriber
@@ -43,15 +72,12 @@ class TestScripts(ToolBaseTest):
 
         request = Request.blank('/', base_url='http://example.org')
 
-        cp = ConfigParser()
-        cp.add_section('app:main')
-        cp.set('app:main', 'use', 'egg:unicore.distribute')
-        cp.set('app:main', 'repo.storage_path', self.WORKING_DIR)
-        sio = StringIO()
-        cp.write(sio)
-
-        tmp_ini_data = sio.getvalue()
-        tmp_ini_file = self.mk_tempfile(tmp_ini_data)
+        tmp_ini_file = self.mk_inifile({
+            'app:main': {
+                'use': 'egg:unicore.distribute',
+                'repo.storage_path': self.WORKING_DIR
+            }
+        })
         env = bootstrap(tmp_ini_file, request=request)
 
         mock = Mock()
