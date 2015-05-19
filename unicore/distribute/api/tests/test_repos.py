@@ -117,11 +117,16 @@ class TestRepositoryResource(ModelBaseTest):
         request.matchdict = {
             'name': repo_name,
         }
+        request.params = {
+            'branch': 'foo',
+            'remote': 'bar',
+        }
         resource = RepositoryResource(request)
 
         with patch.object(request.registry, 'notify') as mocked_notify:
             resource.post()
-            mock_pull.assert_called_with(branch_name='master')
+            mock_pull.assert_called_with(branch_name='foo',
+                                         remote_name='bar')
             (call,) = mocked_notify.call_args_list
             (args, kwargs) = call
             (event,) = args
