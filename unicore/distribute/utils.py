@@ -150,6 +150,7 @@ def format_repo(repo):
     commit = repo.commit()
     return {
         'name': os.path.basename(repo.working_dir),
+        'branch': repo.active_branch.name,
         'commit': commit.hexsha,
         'timestamp': datetime.fromtimestamp(
             commit.committed_date).isoformat(),

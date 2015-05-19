@@ -67,7 +67,12 @@ class TestRepositoryUtils(ModelBaseTest):
         formatted = format_repo(self.workspace.repo)
         self.assertEqual(
             set(formatted.keys()),
-            set(['name', 'commit', 'timestamp', 'author', 'schemas']))
+            set(['name',
+                 'commit',
+                 'timestamp',
+                 'author',
+                 'schemas',
+                 'branch']))
         last_commit = self.workspace.repo.commit()
         self.assertEqual(formatted['commit'], last_commit.hexsha)
         self.assertEqual(
