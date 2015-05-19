@@ -56,10 +56,11 @@ class RepositoryResource(object):
     def post(self):
         name = self.request.matchdict['name']
         branch_name = self.request.params.get('branch', 'master')
+        remote_name = self.request.params.get('remote')
         storage_path = self.config.get('repo.storage_path')
         repo = get_repository(os.path.join(storage_path, name))
         storage_manager = StorageManager(repo)
-        storage_manager.pull(branch_name=branch_name)
+        storage_manager.pull(branch_name=branch_name, remote_name=remote_name)
         # Fire an event
         self.request.registry.notify(
             WebhookEvent(
