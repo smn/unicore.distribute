@@ -9,6 +9,7 @@ from ConfigParser import ConfigParser
 from pyramid.exceptions import NotFound
 
 from git import Repo
+from git.diff import Diff
 from git.exc import InvalidGitRepositoryError, NoSuchPathError, GitCommandError
 
 import avro.schema
@@ -157,6 +158,47 @@ def format_repo(repo):
         'author': '%s <%s>' % (commit.author.name, commit.author.email),
         'schemas': list_schemas(repo)
     }
+
+
+def format_diff_A(diff):
+    return {
+        'type': 'A',
+        'path': diff.b_blob.path,
+    }
+
+
+def format_diff_D(diff):
+    return {
+        'type': 'D',
+        'path': diff.a_blob.path,
+    }
+
+
+def format_diff_R(diff):
+    return {
+        'type': 'R',
+        'rename_from': diff.rename_from,
+        'rename_to': diff.rename_to,
+    }
+
+
+def format_diff_M(diff):
+    return {
+        'type': 'M',
+        'path': diff.a_blob.path,
+    }
+
+
+def format_diffindex(diff_index):
+    for diff in diff_index:
+        if diff.new_file:
+            yield format_diff_A(diff)
+        elif diff.deleted_file:
+            yield format_diff_D(diff)
+        elif diff.renamed:
+            yield format_diff_R(diff)
+        elif diff.a_blob and diff.b_blob and diff.a_blob != diff.b_blob:
+            yield format_diff_M(diff)
 
 
 def format_content_type(repo, content_type):

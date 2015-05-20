@@ -1,4 +1,5 @@
 import os
+import json
 from urlparse import urlparse
 
 from cornice.resource import resource, view
@@ -11,7 +12,8 @@ from unicore.webhooks.events import WebhookEvent
 from unicore.distribute.utils import (
     get_config, get_repositories, get_repository, format_repo,
     format_content_type, format_content_type_object,
-    save_content_type_object, delete_content_type_object)
+    save_content_type_object, delete_content_type_object,
+    format_diffindex)
 
 from git.exc import GitCommandError
 from elasticgit import EG
@@ -60,7 +62,8 @@ class RepositoryResource(object):
         storage_path = self.config.get('repo.storage_path')
         repo = get_repository(os.path.join(storage_path, name))
         storage_manager = StorageManager(repo)
-        storage_manager.pull(branch_name=branch_name, remote_name=remote_name)
+        changes = storage_manager.pull(branch_name=branch_name,
+                                       remote_name=remote_name)
         # Fire an event
         self.request.registry.notify(
             WebhookEvent(
@@ -71,6 +74,7 @@ class RepositoryResource(object):
                     'url': self.request.route_url('repositoryresource',
                                                   name=name)
                 }))
+        return format_diffindex(changes)
 
 
 @resource(collection_path='/repos/{name}/{content_type}.json',
