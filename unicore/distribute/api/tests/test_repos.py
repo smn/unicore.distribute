@@ -29,16 +29,31 @@ class TestRepositoryResource(ModelBaseTest):
 
     def setUp(self):
         self.workspace = self.mk_workspace()
-        schema_string = serialize(TestPerson)
+        self.add_schema(self.workspace, TestPerson)
+        self.config = testing.setUp(settings={
+            'repo.storage_path': self.WORKING_DIR,
+        })
+
+    def add_schema(self, workspace, model_class):
+        schema_string = serialize(model_class)
         schema = json.loads(schema_string)
-        self.workspace.sm.store_data(
+        workspace.sm.store_data(
             os.path.join(
                 '_schemas',
                 '%(namespace)s.%(name)s.avsc' % schema),
             schema_string, 'Writing the schema.')
-        self.config = testing.setUp(settings={
-            'repo.storage_path': self.WORKING_DIR,
-        })
+
+    def create_upstream_for(self, workspace, create_remote=True,
+                            remote_name='origin',
+                            suffix='upstream'):
+        upstream_workspace = self.mk_workspace(
+            name='%s_%s' % (self.id().lower(), suffix),
+            index_prefix='%s_%s' % (self.workspace.index_prefix,
+                                    suffix))
+        if create_remote:
+            workspace.repo.create_remote(
+                remote_name, upstream_workspace.working_dir)
+        return upstream_workspace
 
     def test_collection_get(self):
         request = testing.DummyRequest({})
@@ -135,6 +150,96 @@ class TestRepositoryResource(ModelBaseTest):
                 'repo': repo_name,
                 'url': 'foo',
             })
+
+    def test_pull_additions(self):
+        upstream_workspace = self.create_upstream_for(self.workspace)
+        self.add_schema(upstream_workspace, TestPerson)
+        person1 = TestPerson({'age': 1, 'name': 'person1'})
+        upstream_workspace.save(person1, 'Adding person1.')
+
+        repo_name = os.path.basename(self.workspace.working_dir)
+        request = testing.DummyRequest({})
+        request.route_url = lambda route, name: 'foo'
+        request.matchdict = {
+            'name': repo_name,
+        }
+
+        resource = RepositoryResource(request)
+        [diff] = resource.post()
+        self.assertEqual(diff, {
+            'type': 'A',
+            'path': upstream_workspace.sm.git_name(person1),
+        })
+
+    def test_pull_removals(self):
+        upstream_workspace = self.create_upstream_for(self.workspace)
+        self.add_schema(upstream_workspace, TestPerson)
+        person1 = TestPerson({'age': 1, 'name': 'person1'})
+        upstream_workspace.save(person1, 'Adding person1.')
+        self.workspace.pull()
+        upstream_workspace.delete(person1, 'Removing person1.')
+
+        repo_name = os.path.basename(self.workspace.working_dir)
+        request = testing.DummyRequest({})
+        request.route_url = lambda route, name: 'foo'
+        request.matchdict = {
+            'name': repo_name,
+        }
+
+        resource = RepositoryResource(request)
+        [diff] = resource.post()
+        self.assertEqual(diff, {
+            'type': 'D',
+            'path': upstream_workspace.sm.git_name(person1),
+        })
+
+    def test_pull_renames(self):
+        upstream_workspace = self.create_upstream_for(self.workspace)
+        self.add_schema(upstream_workspace, TestPerson)
+        upstream_workspace.sm.store_data(
+            'README.rst', 'the readme', 'Writing the readme.')
+        self.workspace.pull()
+        # do the rename
+        upstream_workspace.repo.index.move(['README.rst', 'README.txt'])
+        upstream_workspace.repo.index.commit('Renaming rst to txt.')
+
+        repo_name = os.path.basename(self.workspace.working_dir)
+        request = testing.DummyRequest({})
+        request.route_url = lambda route, name: 'foo'
+        request.matchdict = {
+            'name': repo_name,
+        }
+
+        resource = RepositoryResource(request)
+        [diff] = resource.post()
+        self.assertEqual(diff, {
+            'type': 'R',
+            'rename_from': 'README.rst',
+            'rename_to': 'README.txt',
+        })
+
+    def test_pull_modified(self):
+        upstream_workspace = self.create_upstream_for(self.workspace)
+        self.add_schema(upstream_workspace, TestPerson)
+        person1 = TestPerson({'age': 1, 'name': 'person1'})
+        upstream_workspace.save(person1, 'Adding person1.')
+        self.workspace.pull()
+        updated_person1 = person1.update({'age': 2})
+        upstream_workspace.save(updated_person1, 'Updating person1.')
+
+        repo_name = os.path.basename(self.workspace.working_dir)
+        request = testing.DummyRequest({})
+        request.route_url = lambda route, name: 'foo'
+        request.matchdict = {
+            'name': repo_name,
+        }
+
+        resource = RepositoryResource(request)
+        [diff] = resource.post()
+        self.assertEqual(diff, {
+            'type': 'M',
+            'path': upstream_workspace.sm.git_name(person1),
+        })
 
 
 class TestContentTypeResource(ModelBaseTest):
