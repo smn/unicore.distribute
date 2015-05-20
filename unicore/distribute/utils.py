@@ -9,7 +9,6 @@ from ConfigParser import ConfigParser
 from pyramid.exceptions import NotFound
 
 from git import Repo
-from git.diff import Diff
 from git.exc import InvalidGitRepositoryError, NoSuchPathError, GitCommandError
 
 import avro.schema
