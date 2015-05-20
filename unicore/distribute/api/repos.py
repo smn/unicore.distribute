@@ -1,5 +1,4 @@
 import os
-import json
 from urlparse import urlparse
 
 from cornice.resource import resource, view
