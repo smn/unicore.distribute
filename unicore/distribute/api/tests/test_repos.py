@@ -29,16 +29,19 @@ class TestRepositoryResource(ModelBaseTest):
 
     def setUp(self):
         self.workspace = self.mk_workspace()
-        self.schema_string = serialize(TestPerson)
-        self.schema = json.loads(self.schema_string)
-        self.workspace.sm.store_data(
-            os.path.join(
-                '_schemas',
-                '%(namespace)s.%(name)s.avsc' % self.schema),
-            self.schema_string, 'Writing the schema.')
+        self.add_schema(self.workspace, TestPerson)
         self.config = testing.setUp(settings={
             'repo.storage_path': self.WORKING_DIR,
         })
+
+    def add_schema(self, workspace, model_class):
+        schema_string = serialize(model_class)
+        schema = json.loads(schema_string)
+        workspace.sm.store_data(
+            os.path.join(
+                '_schemas',
+                '%(namespace)s.%(name)s.avsc' % schema),
+            schema_string, 'Writing the schema.')
 
     def create_upstream_for(self, workspace, create_remote=True,
                             remote_name='origin',
@@ -150,11 +153,7 @@ class TestRepositoryResource(ModelBaseTest):
 
     def test_pull_additions(self):
         upstream_workspace = self.create_upstream_for(self.workspace)
-        upstream_workspace.sm.store_data(
-            os.path.join(
-                '_schemas',
-                '%(namespace)s.%(name)s.avsc' % self.schema),
-            self.schema_string, 'Writing the schema.')
+        self.add_schema(upstream_workspace, TestPerson)
         person1 = TestPerson({'age': 1, 'name': 'person1'})
         upstream_workspace.save(person1, 'Adding person1.')
 
@@ -174,11 +173,7 @@ class TestRepositoryResource(ModelBaseTest):
 
     def test_pull_removals(self):
         upstream_workspace = self.create_upstream_for(self.workspace)
-        upstream_workspace.sm.store_data(
-            os.path.join(
-                '_schemas',
-                '%(namespace)s.%(name)s.avsc' % self.schema),
-            self.schema_string, 'Writing the schema.')
+        self.add_schema(upstream_workspace, TestPerson)
         person1 = TestPerson({'age': 1, 'name': 'person1'})
         upstream_workspace.save(person1, 'Adding person1.')
         self.workspace.pull()
@@ -200,11 +195,7 @@ class TestRepositoryResource(ModelBaseTest):
 
     def test_pull_renames(self):
         upstream_workspace = self.create_upstream_for(self.workspace)
-        upstream_workspace.sm.store_data(
-            os.path.join(
-                '_schemas',
-                '%(namespace)s.%(name)s.avsc' % self.schema),
-            self.schema_string, 'Writing the schema.')
+        self.add_schema(upstream_workspace, TestPerson)
         upstream_workspace.sm.store_data(
             'README.rst', 'the readme', 'Writing the readme.')
         self.workspace.pull()
@@ -227,13 +218,9 @@ class TestRepositoryResource(ModelBaseTest):
             'rename_to': 'README.txt',
         })
 
-    def test_pull_renames(self):
+    def test_pull_modified(self):
         upstream_workspace = self.create_upstream_for(self.workspace)
-        upstream_workspace.sm.store_data(
-            os.path.join(
-                '_schemas',
-                '%(namespace)s.%(name)s.avsc' % self.schema),
-            self.schema_string, 'Writing the schema.')
+        self.add_schema(upstream_workspace, TestPerson)
         person1 = TestPerson({'age': 1, 'name': 'person1'})
         upstream_workspace.save(person1, 'Adding person1.')
         self.workspace.pull()
