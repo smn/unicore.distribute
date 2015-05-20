@@ -190,6 +190,35 @@ def format_diff_M(diff):
 
 
 def format_diffindex(diff_index):
+    """
+    Return a JSON formattable representation of a DiffIndex.
+
+    Returns a generator that returns dictionaries representing the changes.
+
+    .. code::
+        [
+            {
+                'type': 'A',
+                'path': 'path/to/added/file.txt',
+            },
+            {
+                'type': 'D',
+                'path': 'path/to/deleted/file.txt',
+            },
+            {
+                'type': 'M',
+                'path': 'path/to/modified/file.txt',
+            },
+            {
+                'type': 'R',
+                'rename_from': 'original/path/to/file.txt',
+                'rename_to': 'new/path/to/file.txt',
+            },
+        ]
+
+    :returns: generator
+
+    """
     for diff in diff_index:
         if diff.new_file:
             yield format_diff_A(diff)
