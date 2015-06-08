@@ -94,6 +94,17 @@ def get_repository(path):
         raise NotFound('Repository not found.')
 
 
+def get_index_prefix(path):
+    """
+    Return the Elasticsearch index prefix for the repo at path.
+
+    :param str repo_path:
+        The path to the repositoy
+    :returns: string
+    """
+    return os.path.basename(path)
+
+
 def list_schemas(repo):
     """
     Return a list of parsed avro schemas as dictionaries.

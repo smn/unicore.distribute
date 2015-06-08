@@ -12,7 +12,8 @@ from unicore.distribute.utils import (
     get_config, get_repositories, get_repository, format_repo,
     format_content_type, format_content_type_object,
     save_content_type_object, delete_content_type_object,
-    format_diffindex)
+    format_diffindex, get_index_prefix)
+from unicore.distribute.tasks import reindex
 
 from git.exc import GitCommandError
 from elasticgit import EG
@@ -37,7 +38,13 @@ class RepositoryResource(object):
         repo_name_dot_git = os.path.basename(repo_url_info.path)
         repo_name = repo_name_dot_git.partition('.git')[0]
         try:
-            EG.clone_repo(repo_url, os.path.join(storage_path, repo_name))
+            working_dir = os.path.join(storage_path, repo_name)
+            working_dir = os.path.abspath(working_dir)
+            EG.clone_repo(repo_url, working_dir)
+            reindex.delay(
+                repo_path=working_dir,
+                index_prefix=get_index_prefix(working_dir),
+                es={'urls': [self.config.get('es.host')]})
             self.request.response.headers['Location'] = self.request.route_url(
                 'repositoryresource', name=repo_name)
             self.request.response.status = 301
