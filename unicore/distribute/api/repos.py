@@ -76,7 +76,7 @@ class RepositoryResource(object):
             workspace.destroy()
             self.request.errors.status = 400
             self.request.errors.add(
-                'body', 'repo_url', e.error)
+                'body', 'models', e.error)
 
     @view(renderer='json')
     def get(self):
@@ -90,11 +90,10 @@ class RepositoryResource(object):
         branch_name = self.request.params.get('branch', 'master')
         remote_name = self.request.params.get('remote')
         storage_path = self.config.get('repo.storage_path')
-        repo = get_repository(os.path.join(storage_path, name))
-        # TODO: do workspace.pull() instead so that index is updated?
-        storage_manager = StorageManager(repo)
-        changes = storage_manager.pull(branch_name=branch_name,
-                                       remote_name=remote_name)
+        workspace = EG.workspace(
+            os.path.join(storage_path, name), es=get_es(self.config),
+            index_prefix=get_index_prefix(name))
+        workspace.pull(branch_name, remote_name)
         # Fire an event
         self.request.registry.notify(
             WebhookEvent(
@@ -105,7 +104,7 @@ class RepositoryResource(object):
                     'url': self.request.route_url('repositoryresource',
                                                   name=name)
                 }))
-        return format_diffindex(changes)
+        return ''
 
 
 @resource(collection_path='/repos/{name}/{content_type}.json',
@@ -129,9 +128,11 @@ class ContentTypeResource(object):
         name = self.request.matchdict['name']
         uuid = self.request.matchdict['uuid']
         storage_path = self.config.get('repo.storage_path')
-        commit, model = save_content_type_object(
-            get_repository(os.path.join(storage_path, name)),
-            self.request.schema, uuid, self.request.schema_data)
+        workspace = EG.workspace(
+            os.path.join(storage_path, name), es=get_es(self.config),
+            index_prefix=get_index_prefix(name))
+        model = save_content_type_object(
+            workspace, self.request.schema, uuid, self.request.schema_data)
         return dict(model)
 
     @view(renderer='json')
@@ -150,7 +151,8 @@ class ContentTypeResource(object):
         content_type = self.request.matchdict['content_type']
         uuid = self.request.matchdict['uuid']
         storage_path = self.config.get('repo.storage_path')
-        commit, model = delete_content_type_object(
-            get_repository(os.path.join(storage_path, name)),
-            content_type, uuid)
+        workspace = EG.workspace(
+            os.path.join(storage_path, name), es=get_es(self.config),
+            index_prefix=get_index_prefix(name))
+        model = delete_content_type_object(workspace, content_type, uuid)
         return dict(model)

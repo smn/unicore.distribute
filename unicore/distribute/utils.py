@@ -279,28 +279,26 @@ def format_content_type_object(repo, content_type, uuid):
         raise NotFound('Object does not exist.')
 
 
-def save_content_type_object(repo, schema, uuid, data):
+def save_content_type_object(workspace, schema, uuid, data):
     """
     Save an object as a certain content type
     """
-    storage_manager = StorageManager(repo)
     model_class = deserialize(schema,
                               module_name=schema['namespace'])
     model = model_class(data)
-    commit = storage_manager.store(model, 'Updated via PUT request.')
-    return commit, model
+    workspace.save(model, 'Updated via PUT request.')
+    return model
 
 
-def delete_content_type_object(repo, content_type, uuid):
+def delete_content_type_object(workspace, content_type, uuid):
     """
     Delete an object of a certain content type
     """
-    storage_manager = StorageManager(repo)
-    schema = get_schema(repo, content_type).to_json()
+    schema = get_schema(workspace.repo, content_type).to_json()
     model_class = deserialize(schema, module_name=schema['namespace'])
-    model = storage_manager.get(model_class, uuid)
-    commit = storage_manager.delete(model, 'Deleted via DELETE request.')
-    return commit, model
+    model = workspace.sm.get(model_class, uuid)
+    workspace.delete(model, 'Deleted via DELETE request.')
+    return model
 
 
 def get_config(request):  # pragma: no cover
@@ -337,7 +335,7 @@ def load_content_type_class(repo, content_type):
     :returns: class
     """
     try:
-        schema = get_schema(repo, content_type)
+        schema = get_schema(repo, content_type).to_json()
         return deserialize(schema, module_name=schema['namespace'])
     except NotFound as e:
         try:
