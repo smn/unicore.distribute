@@ -16,6 +16,7 @@ from unicore.distribute.utils import (
     get_es)
 
 from git.exc import GitCommandError
+from elasticsearch import ElasticsearchException
 from elasticgit import EG
 from elasticgit.workspace import Workspace
 
@@ -41,14 +42,18 @@ class RepositoryResource(object):
         working_dir = os.path.join(storage_path, repo_name)
         try:
             repo = EG.clone_repo(repo_url, working_dir)
+            workspace = Workspace(
+                repo, es=get_es(self.config),
+                index_prefix=get_index_prefix(working_dir))
+            workspace.setup(
+                name=self.request.validated['user_name'],
+                email=self.request.validated['user_email'])
+
             model_mappings = self.request.validated['models']
             model_mappings = map(
                 lambda (ct, mapping): (
                     load_content_type_class(repo, ct), mapping),
                 model_mappings.iteritems())
-            workspace = Workspace(
-                repo, es=get_es(self.config),
-                index_prefix=get_index_prefix(working_dir))
             # load mappings
             for model_class, mapping in model_mappings:
                 if mapping is None:
@@ -67,6 +72,11 @@ class RepositoryResource(object):
             self.request.errors.status = 400
             self.request.errors.add(
                 'body', 'repo_url', e.stderr)
+        except (ElasticsearchException,), e:
+            workspace.destroy()
+            self.request.errors.status = 400
+            self.request.errors.add(
+                'body', 'repo_url', e.error)
 
     @view(renderer='json')
     def get(self):
