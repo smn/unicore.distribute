@@ -15,6 +15,7 @@ import avro.schema
 
 from elasticgit.commands.avro import deserialize
 from elasticgit.storage import StorageManager
+from elasticgit.utils import load_class
 
 
 class UCConfigParser(ConfigParser):
@@ -310,3 +311,36 @@ def get_config(request):  # pragma: no cover
         The HTTP request
     """
     return request.registry.settings
+
+
+def get_es(config):
+    """
+    Return the Elasticsearch settings dict
+
+    :param dict config:
+        The app configuration
+    :returns: dict
+    """
+    return {
+        'urls': [config.get('es.host', 'http://localhost:9200')]
+    }
+
+
+def load_content_type_class(repo, content_type):
+    """
+    Return a model class for a content type in a repository.
+
+    :param Repo repo:
+        The git repository.
+    :param str content_type:
+        The content type to list
+    :returns: class
+    """
+    try:
+        schema = get_schema(repo, content_type)
+        return deserialize(schema, module_name=schema['namespace'])
+    except NotFound as e:
+        try:
+            return load_class(content_type)
+        except ImportError:
+            raise e

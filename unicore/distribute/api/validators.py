@@ -3,7 +3,8 @@ import json
 
 from avro.io import validate
 
-from colander import MappingSchema, SchemaNode, String, Invalid
+from colander import (
+    MappingSchema, SchemaNode, String, Invalid, Mapping, Length)
 
 from unicore.distribute.utils import get_config, get_repository, get_schema
 
@@ -43,6 +44,22 @@ def repo_url_type_schema_validator(node, value):
         raise Invalid(node, '%r is not a valid repo_url' % (value,))
 
 
+def model_mapping_preparer(value):
+    if not isinstance(value, dict):
+        return value
+
+    for model_name, mapping in value.iteritems():
+        if not mapping:
+            value[model_name] = None
+        # drop all keys aside from properties
+        value[model_name] = {'properties': mapping.get('properties')}
+
+    return value
+
+
 class CreateRepoColanderSchema(MappingSchema):
     repo_url = SchemaNode(
         String(), location='body', validator=repo_url_type_schema_validator)
+    models = SchemaNode(
+        Mapping(unknown='preserve'), location='body',
+        preparer=model_mapping_preparer, validator=Length(min=1))
