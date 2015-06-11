@@ -4,7 +4,7 @@ import json
 from avro.io import validate
 
 from colander import (
-    MappingSchema, SchemaNode, String, Invalid, Mapping, Length)
+    MappingSchema, SchemaNode, String, Invalid, Mapping)
 
 from unicore.distribute.utils import get_config, get_repository, get_schema
 
@@ -62,4 +62,4 @@ class CreateRepoColanderSchema(MappingSchema):
         String(), location='body', validator=repo_url_type_schema_validator)
     models = SchemaNode(
         Mapping(unknown='preserve'), location='body',
-        preparer=model_mapping_preparer, validator=Length(min=1))
+        preparer=model_mapping_preparer, missing={})
