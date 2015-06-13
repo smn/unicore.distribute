@@ -3,7 +3,12 @@ from urlparse import urlparse
 
 from cornice.resource import resource, view
 
+from git.exc import GitCommandError
+
+from elasticsearch import ElasticsearchException
+from elasticgit import EG
 from elasticgit.storage import StorageManager
+from elasticgit.search import ESManager
 
 from unicore.distribute.api.validators import (
     validate_schema, CreateRepoColanderSchema)
@@ -13,11 +18,8 @@ from unicore.distribute.utils import (
     get_config, get_repositories, get_repository, format_repo,
     format_content_type, format_content_type_object,
     save_content_type_object, delete_content_type_object,
-    format_diffindex, get_index_prefix, load_content_type_class,
+    format_diffindex, get_index_prefix, load_model_class,
     get_es)
-
-from git.exc import GitCommandError
-from elasticgit import EG
 
 
 @resource(collection_path='/repos.json', path='/repos/{name}.json')
@@ -44,6 +46,7 @@ class RepositoryResource(object):
             model_mappings = self.request.validated['models']
             self.request.registry.notify(
                 RepositoryCloned(
+                    config=self.config,
                     repo=repo,
                     mapping=model_mappings))
             self.request.response.headers['Location'] = self.request.route_url(
@@ -74,6 +77,7 @@ class RepositoryResource(object):
         # Fire an event
         self.request.registry.notify(
             RepositoryUpdated(
+                config=self.config,
                 repo=repo,
                 changes=changes))
         self.request.registry.notify(
@@ -86,6 +90,42 @@ class RepositoryResource(object):
                                                   name=name)
                 }))
         return format_diffindex(changes)
+
+
+def initialize_repo_index(event):
+    repo = event.repo
+    model_mappings = map(
+        lambda (content_type, mapping): (load_model_class(repo, content_type),
+                                         mapping),
+        event.mapping.iteritems())
+    sm = StorageManager(repo)
+    im = ESManager(
+        storage_manager=sm,
+        es=get_es(event.config),
+        index_prefix=get_index_prefix(repo.working_dir))
+
+    if im.index_exists(sm.active_branch()):
+        im.destroy_index(sm.active_branch())
+    im.create_index(sm.active_branch())
+
+    try:
+        for model_class, mapping in model_mappings:
+            if mapping is None:
+                im.setup_mapping(sm.active_branch(), model_class)
+            else:
+                im.setup_custom_mapping(
+                    sm.active_branch(), model_class, mapping)
+
+        for model_class, _ in model_mappings:
+            for model in sm.iterate(model_class):
+                im.index(model)
+    except ElasticsearchException:
+        im.destroy_index(sm.active_branch())
+        raise
+
+
+def update_repo_index(event):
+    pass
 
 
 @resource(collection_path='/repos/{name}/{content_type}.json',

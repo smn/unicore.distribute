@@ -13,9 +13,10 @@ from git.exc import InvalidGitRepositoryError, NoSuchPathError, GitCommandError
 
 import avro.schema
 
+from elasticutils import get_es as get_es_object
+
 from elasticgit.commands.avro import deserialize
 from elasticgit.storage import StorageManager
-from elasticgit.utils import load_class
 
 
 class UCConfigParser(ConfigParser):
@@ -253,8 +254,7 @@ def format_content_type(repo, content_type):
     :returns: list
     """
     storage_manager = StorageManager(repo)
-    schema = get_schema(repo, content_type).to_json()
-    model_class = deserialize(schema, module_name=schema['namespace'])
+    model_class = load_model_class(repo, content_type)
     return [dict(model_obj)
             for model_obj in storage_manager.iterate(model_class)]
 
@@ -272,8 +272,7 @@ def format_content_type_object(repo, content_type, uuid):
     """
     try:
         storage_manager = StorageManager(repo)
-        schema = get_schema(repo, content_type).to_json()
-        model_class = deserialize(schema, module_name=schema['namespace'])
+        model_class = load_model_class(repo, content_type)
         return dict(storage_manager.get(model_class, uuid))
     except GitCommandError:
         raise NotFound('Object does not exist.')
@@ -296,8 +295,7 @@ def delete_content_type_object(repo, content_type, uuid):
     Delete an object of a certain content type
     """
     storage_manager = StorageManager(repo)
-    schema = get_schema(repo, content_type).to_json()
-    model_class = deserialize(schema, module_name=schema['namespace'])
+    model_class = load_model_class(repo, content_type)
     model = storage_manager.get(model_class, uuid)
     commit = storage_manager.delete(model, 'Deleted via DELETE request.')
     return commit, model
@@ -315,18 +313,17 @@ def get_config(request):  # pragma: no cover
 
 def get_es(config):
     """
-    Return the Elasticsearch settings dict
+    Return the :py:class:`elasticsearch.Elasticsearch` object based
+    on the config.
 
     :param dict config:
         The app configuration
-    :returns: dict
+    :returns: Elasticsearch
     """
-    return {
-        'urls': [config.get('es.host', 'http://localhost:9200')]
-    }
+    return get_es_object(urls=[config.get('es.host', 'http://localhost:9200')])
 
 
-def load_content_type_class(repo, content_type):
+def load_model_class(repo, content_type):
     """
     Return a model class for a content type in a repository.
 
@@ -336,11 +333,5 @@ def load_content_type_class(repo, content_type):
         The content type to list
     :returns: class
     """
-    try:
-        schema = get_schema(repo, content_type)
-        return deserialize(schema, module_name=schema['namespace'])
-    except NotFound as e:
-        try:
-            return load_class(content_type)
-        except ImportError:
-            raise e
+    schema = get_schema(repo, content_type).to_json()
+    return deserialize(schema, module_name=schema['namespace'])
