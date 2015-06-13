@@ -20,6 +20,7 @@ class RepositoryCloned(RepositoryEvent):
 
 class RepositoryUpdated(RepositoryEvent):
 
-    def __init__(self, changes, *args, **kwargs):
+    def __init__(self, changes, branch, *args, **kwargs):
         super(RepositoryUpdated, self).__init__(*args, **kwargs)
         self.changes = changes
+        self.branch = branch
