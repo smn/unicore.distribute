@@ -13,7 +13,9 @@ from elasticgit.search import ESManager
 
 from unicore.distribute.api.validators import (
     validate_schema, CreateRepoColanderSchema)
-from unicore.distribute.events import RepositoryCloned, RepositoryUpdated
+from unicore.distribute.events import (
+    RepositoryCloned, RepositoryUpdated, ContentTypeObjectUpdated,
+    ContentTypeObjectDeleted)
 from unicore.webhooks.events import WebhookEvent
 from unicore.distribute.utils import (
     get_config, get_repositories, get_repository, format_repo,
@@ -75,7 +77,7 @@ class RepositoryResource(object):
         storage_manager = StorageManager(repo)
         changes = storage_manager.pull(branch_name=branch_name,
                                        remote_name=remote_name)
-        # Fire an event
+        # Fire events
         self.request.registry.notify(
             RepositoryUpdated(
                 config=self.config,
@@ -137,7 +139,6 @@ def update_repo_index(event):
     im = workspace.im
 
     old_branch = repo.head.ref
-    # TODO: use git.util.LockFile?
     repo.heads[event.branch].checkout()
 
     if len(repo.remotes) > 1 and any(changes):
@@ -194,9 +195,14 @@ class ContentTypeResource(object):
         name = self.request.matchdict['name']
         uuid = self.request.matchdict['uuid']
         storage_path = self.config.get('repo.storage_path')
+        repo = get_repository(os.path.join(storage_path, name))
         commit, model = save_content_type_object(
-            get_repository(os.path.join(storage_path, name)),
-            self.request.schema, uuid, self.request.schema_data)
+            repo, self.request.schema, uuid, self.request.schema_data)
+        # Fire event
+        self.request.registry.notify(ContentTypeObjectUpdated(
+            config=self.config,
+            repo=repo,
+            model=model))
         return dict(model)
 
     @view(renderer='json')
@@ -215,7 +221,20 @@ class ContentTypeResource(object):
         content_type = self.request.matchdict['content_type']
         uuid = self.request.matchdict['uuid']
         storage_path = self.config.get('repo.storage_path')
+        repo = get_repository(os.path.join(storage_path, name))
         commit, model = delete_content_type_object(
-            get_repository(os.path.join(storage_path, name)),
-            content_type, uuid)
+            repo, content_type, uuid)
+        # Fire event
+        self.request.registry.notify(ContentTypeObjectDeleted(
+            config=self.config,
+            repo=repo,
+            model=model))
         return dict(model)
+
+
+def index_content_type_object(event):
+    pass
+
+
+def unindex_content_type_object(event):
+    pass

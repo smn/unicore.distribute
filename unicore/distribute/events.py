@@ -24,3 +24,18 @@ class RepositoryUpdated(RepositoryEvent):
         super(RepositoryUpdated, self).__init__(*args, **kwargs)
         self.changes = changes
         self.branch = branch
+
+
+class ContentTypeObjectEvent(RepositoryEvent):
+
+    def __init__(self, model, *args, **kwargs):
+        super(ContentTypeObjectUpdated, self).__init__(*args, **kwargs)
+        self.model = model
+
+
+class ContentTypeObjectUpdated(ContentTypeObjectEvent):
+    pass
+
+
+class ContentTypeObjectDeleted(ContentTypeObjectEvent):
+    pass
