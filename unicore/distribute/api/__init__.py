@@ -33,6 +33,3 @@ def includeme(config):
         config.add_subscriber(
             'unicore.distribute.api.repos.index_content_type_object',
             'unicore.distribute.events.ContentTypeObjectUpdated')
-        config.add_subscriber(
-            'unicore.distribute.api.repos.unindex_content_type_object',
-            'unicore.distribute.events.ContentTypeObjectDeleted')

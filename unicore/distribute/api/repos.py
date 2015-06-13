@@ -14,8 +14,7 @@ from elasticgit.search import ESManager
 from unicore.distribute.api.validators import (
     validate_schema, CreateRepoColanderSchema)
 from unicore.distribute.events import (
-    RepositoryCloned, RepositoryUpdated, ContentTypeObjectUpdated,
-    ContentTypeObjectDeleted)
+    RepositoryCloned, RepositoryUpdated, ContentTypeObjectUpdated)
 from unicore.webhooks.events import WebhookEvent
 from unicore.distribute.utils import (
     get_config, get_repositories, get_repository, format_repo,
@@ -202,7 +201,8 @@ class ContentTypeResource(object):
         self.request.registry.notify(ContentTypeObjectUpdated(
             config=self.config,
             repo=repo,
-            model=model))
+            model=model,
+            change_type='update'))
         return dict(model)
 
     @view(renderer='json')
@@ -225,16 +225,22 @@ class ContentTypeResource(object):
         commit, model = delete_content_type_object(
             repo, content_type, uuid)
         # Fire event
-        self.request.registry.notify(ContentTypeObjectDeleted(
+        self.request.registry.notify(ContentTypeObjectUpdated(
             config=self.config,
             repo=repo,
-            model=model))
+            model=model,
+            change_type='delete'))
         return dict(model)
 
 
 def index_content_type_object(event):
-    pass
-
-
-def unindex_content_type_object(event):
-    pass
+    repo = event.repo
+    model = event.model
+    im = ESManager(
+        storage_manager=StorageManager(repo),
+        es=get_es(event.config),
+        index_prefix=get_index_prefix(repo.working_dir))
+    if event.change_type == 'delete':
+        im.unindex(model)
+    else:
+        im.index(model)
