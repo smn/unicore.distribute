@@ -4,3 +4,6 @@ pip:
  - gunicorn
 dependencies:
  - git
+ - libffi-dev
+ - libssl-dev
+

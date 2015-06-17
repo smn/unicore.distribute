@@ -68,7 +68,81 @@ It is also possible the clone a repository directly from the API::
         -d '{"repo_url": "https://example.com/repo.git"}' \
         http://localhost:6543/repos.json
 
-.. image:: unicore.distribute.gif
+Webhooks
+========
+
+The application can notify you when it is notified of changes made to
+the upstream repository::
+
+Make sure the lines in ``development.ini`` relating to ``unicore.webhooks``
+are uncommented and then initialize the database::
+
+    $ alembic upgread head
+
+Now your database is configured and you can store Webhooks::
+
+    $ curl -XPOST \
+        -H 'Content-Type: application/json' \
+        -d '{"event_type": "repo.push", "url": "http://requestb.in/vystj5vy", "active": true}' \
+        http://localhost:6543/hooks
+    {
+        "uuid": "09b901ccc5094f1a89f8bd03165fe3d6",
+        "owner": null,
+        "url": "http://requestb.in/vystj5vy",
+        "event_type": "repo.push",
+        "active": true
+    }
+
+.. note:: Currently the only ``event_type`` supported is ``repo.push``
+
+Now if we notify the API of changes being made upstream (say via GitHub's webhooks)
+we will now relay that all webhooks registered::
+
+    $ curl -XPOST http://localhost:6543/repos/unicore-sample-content.json
+
+Here is the request made to the registered URL with the JSON payload:
+
+.. image:: images/requestbin.jpg
+
+Polling
+=======
+
+Unicore.distribute ships with a command line program::
+
+    $ unicore.distribute --help
+    usage: unicore.distribute [-h] {poll-repositories} ...
+
+    unicore.distribute command line tools.
+
+    positional arguments:
+      {poll-repositories}  Commands
+        poll-repositories  poll repositories
+
+    optional arguments:
+      -h, --help           show this help message and exit
+
+The only feature currently available is one which can be used to poll
+repositories at a regular interval to see if new content has arrived.
+If that is the case then an event is fired and the registered webhook URLs
+are called::
+
+    $ unicore.distribute poll-repositories --help
+    usage: unicore.distribute poll-repositories [-h] [-d REPO_DIR] [-i INI_FILE]
+                                            [-u BASE_URL]
+
+    optional arguments:
+        -h, --help            show this help message and exit
+        -d REPO_DIR, --repo-dir REPO_DIR
+                              The directory with repositories.
+        -i INI_FILE, --ini-file INI_FILE
+                              The project's ini file.
+        -u BASE_URL, --base-url BASE_URL
+                              This server's public URL (for webhooks)
+
+Hook up the ``poll-repositories`` sub-command to cron for regular polling::
+
+    */15 * * * * unicore.distribute poll-repositories -d /var/praekelt/repos/ -i development.ini -u http://unicore.io
+
 
 Querying
 ========

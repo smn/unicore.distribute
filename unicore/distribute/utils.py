@@ -150,12 +150,83 @@ def format_repo(repo):
     commit = repo.commit()
     return {
         'name': os.path.basename(repo.working_dir),
+        'branch': repo.active_branch.name,
         'commit': commit.hexsha,
         'timestamp': datetime.fromtimestamp(
             commit.committed_date).isoformat(),
         'author': '%s <%s>' % (commit.author.name, commit.author.email),
         'schemas': list_schemas(repo)
     }
+
+
+def format_diff_A(diff):
+    return {
+        'type': 'A',
+        'path': diff.b_blob.path,
+    }
+
+
+def format_diff_D(diff):
+    return {
+        'type': 'D',
+        'path': diff.a_blob.path,
+    }
+
+
+def format_diff_R(diff):
+    return {
+        'type': 'R',
+        'rename_from': diff.rename_from,
+        'rename_to': diff.rename_to,
+    }
+
+
+def format_diff_M(diff):
+    return {
+        'type': 'M',
+        'path': diff.a_blob.path,
+    }
+
+
+def format_diffindex(diff_index):
+    """
+    Return a JSON formattable representation of a DiffIndex.
+
+    Returns a generator that returns dictionaries representing the changes.
+
+    .. code::
+        [
+            {
+                'type': 'A',
+                'path': 'path/to/added/file.txt',
+            },
+            {
+                'type': 'D',
+                'path': 'path/to/deleted/file.txt',
+            },
+            {
+                'type': 'M',
+                'path': 'path/to/modified/file.txt',
+            },
+            {
+                'type': 'R',
+                'rename_from': 'original/path/to/file.txt',
+                'rename_to': 'new/path/to/file.txt',
+            },
+        ]
+
+    :returns: generator
+
+    """
+    for diff in diff_index:
+        if diff.new_file:
+            yield format_diff_A(diff)
+        elif diff.deleted_file:
+            yield format_diff_D(diff)
+        elif diff.renamed:
+            yield format_diff_R(diff)
+        elif diff.a_blob and diff.b_blob and diff.a_blob != diff.b_blob:
+            yield format_diff_M(diff)
 
 
 def format_content_type(repo, content_type):
