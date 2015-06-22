@@ -21,20 +21,3 @@ class RepositoryStatusResource(object):
         storage_path = self.config.get('repo.storage_path')
         return format_repo_status(get_repository(
             os.path.join(storage_path, name)))
-
-
-@resource(path='/status/{name}/{commit_id}.json')
-class RepositoryDiffFilesResource(object):
-    def __init__(self, request):
-        self.request = request
-        self.config = get_config(request)
-
-    @view(renderer='json')
-    def get(self):
-        name = self.request.matchdict['name']
-        commit_id = self.request.matchdict['commit_id']
-        storage_path = self.config.get('repo.storage_path')
-        return {
-            "commit": commit_id,
-            "commit_reversed": commit_id[::-1]
-        }
