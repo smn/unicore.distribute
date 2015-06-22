@@ -267,6 +267,27 @@ def format_content_type_object(repo, content_type, uuid):
         raise NotFound('Object does not exist.')
 
 
+def format_repo_status(repo):
+    """
+    Return a dictionary representing the repository status
+
+    It returns ``None`` for things we do not support or are not
+    relevant.
+
+    :param str repo_name:
+        The name of the repository.
+    :returns: dict
+
+    """
+    commit = repo.commit()
+    return {
+        'name': os.path.basename(repo.working_dir),
+        'commit': commit.hexsha,
+        'timestamp': datetime.fromtimestamp(
+            commit.committed_date).isoformat(),
+    }
+
+
 def save_content_type_object(repo, schema, uuid, data):
     """
     Save an object as a certain content type
