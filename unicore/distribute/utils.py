@@ -320,3 +320,31 @@ def get_config(request):  # pragma: no cover
         The HTTP request
     """
     return request.registry.settings
+
+
+def get_repository_diff(repo, commit_id):
+    commit = repo.head.commit
+    try:
+        diff = commit.diff(commit_id)
+        json_diff = []
+
+        for diff_added in diff.iter_change_type('A'):
+            json_diff.append(format_diff_A(diff_added))
+
+        for diff_removed in diff.iter_change_type('D'):
+            json_diff.append(format_diff_D(diff_removed))
+
+        for diff_modified in diff.iter_change_type('M'):
+            json_diff.append(format_diff_M(diff_modified))
+
+        for diff_added in diff.iter_change_type('R'):
+            json_diff.append(format_diff_R(diff_added))
+
+        return {
+            "name": os.path.basename(repo.working_dir),
+            "index1": commit_id,
+            "index2": repo.commit().hexsha,
+            "diff": json_diff
+        }
+    except GitCommandError:
+        raise NotFound("The git index does not exist")
