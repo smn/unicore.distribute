@@ -9,7 +9,8 @@ from ConfigParser import ConfigParser
 from pyramid.exceptions import NotFound
 
 from git import Repo
-from git.exc import InvalidGitRepositoryError, NoSuchPathError, GitCommandError
+from git.exc import (
+    InvalidGitRepositoryError, NoSuchPathError, GitCommandError, BadName)
 
 import avro.schema
 
@@ -21,6 +22,7 @@ class UCConfigParser(ConfigParser):
     """
     A config parser that understands lists and dictionaries.
     """
+
     def get_list(self, section, option):
         """
         This allows for loading of Pyramid list style configuration
@@ -77,7 +79,7 @@ def get_repositories(path):
     return [get_repository(os.path.join(path, subdir))
             for subdir in os.listdir(path)
             if os.path.isdir(
-                os.path.join(path, subdir, '.git'))]
+            os.path.join(path, subdir, '.git'))]
 
 
 def get_repository(path):
@@ -122,9 +124,9 @@ def get_schema(repo, content_type):
     """
     try:
         with open(
-            os.path.join(repo.working_dir,
-                         '_schemas',
-                         '%s.avsc' % (content_type,)), 'r') as fp:
+                os.path.join(repo.working_dir,
+                             '_schemas',
+                             '%s.avsc' % (content_type,)), 'r') as fp:
             data = fp.read()
             return avro.schema.parse(data)
     except IOError:  # pragma: no cover
@@ -322,10 +324,29 @@ def get_config(request):  # pragma: no cover
     return request.registry.settings
 
 
+def get_schema_names(repo):
+    schema_files = glob.glob(
+        os.path.join(repo.working_dir, '_schemas', '*.avsc'))
+    names = []
+    for schema_file in schema_files:
+        names.append(
+            schema_file[schema_file.rfind("/") + 1:schema_file.rfind(".")])
+    return names
+
+
+def add_model_item_to_pull_dict(storage_manager, path, pull_dict):
+    if path.endswith(".json"):
+        model = storage_manager.load(path)
+        pull_dict[model.__module__ + "." +
+                  model.__class__.__name__].append(dict(model))
+        return True
+    return False
+
+
 def get_repository_diff(repo, commit_id):
-    commit = repo.head.commit
     try:
-        diff = commit.diff(commit_id)
+        old_commit = repo.commit(commit_id)
+        diff = old_commit.diff(repo.head)
         json_diff = []
 
         for diff_added in diff.iter_change_type('A'):
@@ -346,5 +367,37 @@ def get_repository_diff(repo, commit_id):
             "index2": repo.commit().hexsha,
             "diff": json_diff
         }
-    except GitCommandError:
+    except (GitCommandError, BadName):
+        raise NotFound("The git index does not exist")
+
+
+def pull_repository_files(repo, commit_id):
+    changed_files = {}
+    for name in get_schema_names(repo):
+        changed_files[name] = []
+
+    try:
+        old_commit = repo.commit(commit_id)
+        diff = old_commit.diff(repo.head)
+
+        sm = StorageManager(repo)
+        for diff_added in diff.iter_change_type('A'):
+            add_model_item_to_pull_dict(
+                sm, diff_added.b_blob.path, changed_files)
+
+        for diff_modified in diff.iter_change_type('M'):
+            add_model_item_to_pull_dict(
+                sm, diff_modified.b_blob.path, changed_files)
+
+        json_diff = []
+        for diff_added in diff.iter_change_type('R'):
+            json_diff.append(format_diff_R(diff_added))
+
+        for diff_removed in diff.iter_change_type('D'):
+            json_diff.append(format_diff_D(diff_removed))
+
+        changed_files["other"] = json_diff
+        return changed_files
+
+    except (GitCommandError, BadName):
         raise NotFound("The git index does not exist")
