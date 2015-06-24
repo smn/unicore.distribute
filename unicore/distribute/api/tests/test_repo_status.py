@@ -1,4 +1,5 @@
 import json
+from elasticgit import EG
 from git import Repo
 import os
 from elasticgit.commands.avro import serialize
@@ -18,6 +19,7 @@ class TestRepositoryStatusResource(ModelBaseTest):
         self.config = testing.setUp(settings={
             'repo.storage_path': self.WORKING_DIR,
         })
+        self.addCleanup(lambda: EG.workspace(self.WORKING_DIR).destroy())
 
     def add_schema(self, workspace, model_class):
         schema_string = serialize(model_class)
@@ -62,11 +64,12 @@ class TestRepositoryDiffResource(ModelBaseTest):
         self.config = testing.setUp(settings={
             'repo.storage_path': self.WORKING_DIR,
         })
-        self.create_commit("initial commit", True)
+        self.initial_commit = self.create_commit("initial commit")
         self.add_file(os.path.join(self.workspace.working_dir, "file-1"))
         self.add_file(os.path.join(self.workspace.working_dir, "file-2"))
         self.add_file(os.path.join(self.workspace.working_dir, "file-3"))
-        self.create_commit("second commit", False)
+        self.create_commit("second commit")
+        self.addCleanup(lambda: EG.workspace(self.WORKING_DIR).destroy())
 
     def add_schema(self, workspace, model_class):
         schema_string = serialize(model_class)
@@ -77,12 +80,10 @@ class TestRepositoryDiffResource(ModelBaseTest):
                 '%(namespace)s.%(name)s.avsc' % schema),
             schema_string, 'Writing the schema.')
 
-    def create_commit(self, message, is_initial_commit):
-        global initial_commit
+    def create_commit(self, message):
         repo = Repo(self.workspace.working_dir)
         repo.commit(repo.index.commit(message))
-        if is_initial_commit:
-            initial_commit = repo.commit().hexsha
+        return repo.commit().hexsha
 
     def add_file(self, filename):
         repo = Repo(self.workspace.working_dir)
@@ -90,7 +91,6 @@ class TestRepositoryDiffResource(ModelBaseTest):
         repo.index.add([filename])
 
     def test_get(self):
-        global initial_commit
         request = testing.DummyRequest({})
         repo_name = os.path.basename(self.workspace.working_dir)
         request.matchdict = {
@@ -103,7 +103,6 @@ class TestRepositoryDiffResource(ModelBaseTest):
             self.workspace.repo, self.initial_commit))
 
     def test_get_404(self):
-        global initial_commit
         request = testing.DummyRequest({})
         repo_name = os.path.basename(self.workspace.working_dir)
         request.matchdict = {
@@ -128,6 +127,7 @@ class TestRepositoryPullResource(ModelBaseTest):
         self.add_file(os.path.join(self.workspace.working_dir, "file-2"))
         self.add_file(os.path.join(self.workspace.working_dir, "file-3"))
         self.create_commit("second commit")
+        self.addCleanup(lambda: EG.workspace(self.WORKING_DIR).destroy())
 
     def add_schema(self, workspace, model_class):
         schema_string = serialize(model_class)
