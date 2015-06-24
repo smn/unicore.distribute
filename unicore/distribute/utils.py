@@ -387,3 +387,11 @@ def pull_repository_files(repo, commit_id):
 
     except (GitCommandError, BadName):
         raise NotFound("The git index does not exist")
+
+
+def clone_repository(repo):
+    get_schema_names(repo)
+    files = {}
+    for name in get_schema_names(repo):
+        files[name] = format_content_type(repo, name)
+    return files

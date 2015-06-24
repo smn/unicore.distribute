@@ -2,7 +2,8 @@ import os
 from cornice.resource import resource, view
 from unicore.distribute.utils import (
     get_config, format_repo_status, get_repository,
-    get_repositories, get_repository_diff, pull_repository_files)
+    get_repositories, get_repository_diff, pull_repository_files,
+    clone_repository)
 
 
 @resource(collection_path='status.json', path='/status/{name}.json')
@@ -52,3 +53,17 @@ class RepositoryPullResource(object):
         storage_path = self.config.get('repo.storage_path')
         return pull_repository_files(get_repository(
             os.path.join(storage_path, name)), commit_id)
+
+
+@resource(path='/clone/{name}.json')
+class RepositoryCloneResource(object):
+    def __init__(self, request):
+        self.request = request
+        self.config = get_config(request)
+
+    @view(renderer='json')
+    def get(self):
+        name = self.request.matchdict['name']
+        storage_path = self.config.get('repo.storage_path')
+        return clone_repository(
+            get_repository(os.path.join(storage_path, name)))
