@@ -383,6 +383,7 @@ def pull_repository_files(repo, commit_id):
             json_diff.append(format_diff_D(diff_removed))
 
         changed_files["other"] = json_diff
+        changed_files["commit"] = repo.head.commit.hexsha
         return changed_files
 
     except (GitCommandError, BadName):
@@ -394,4 +395,6 @@ def clone_repository(repo):
     files = {}
     for name in get_schema_names(repo):
         files[name] = format_content_type(repo, name)
+
+    files['commit'] = repo.head.commit.hexsha
     return files
