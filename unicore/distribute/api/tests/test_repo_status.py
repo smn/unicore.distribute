@@ -31,9 +31,7 @@ class TestRepositoryStatusResource(ModelBaseTest):
     def test_collection_get(self):
         request = testing.DummyRequest({})
         resource = RepositoryStatusResource(request)
-        foo = resource.collection_get()
-        print foo
-        [repo_json] = foo
+        [repo_json] = resource.collection_get()
         self.assertEqual(repo_json, format_repo_status(self.workspace.repo))
 
     def test_get(self):
