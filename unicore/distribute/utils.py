@@ -329,8 +329,7 @@ def get_schema_names(repo):
         os.path.join(repo.working_dir, '_schemas', '*.avsc'))
     names = []
     for schema_file in schema_files:
-        names.append(
-            schema_file[schema_file.rfind("/") + 1:schema_file.rfind(".")])
+        names.append(os.path.basename(os.path.splitext(schema_file)[0]))
     return names
 
 
@@ -347,25 +346,12 @@ def get_repository_diff(repo, commit_id):
     try:
         old_commit = repo.commit(commit_id)
         diff = old_commit.diff(repo.head)
-        json_diff = []
-
-        for diff_added in diff.iter_change_type('A'):
-            json_diff.append(format_diff_A(diff_added))
-
-        for diff_removed in diff.iter_change_type('D'):
-            json_diff.append(format_diff_D(diff_removed))
-
-        for diff_modified in diff.iter_change_type('M'):
-            json_diff.append(format_diff_M(diff_modified))
-
-        for diff_added in diff.iter_change_type('R'):
-            json_diff.append(format_diff_R(diff_added))
 
         return {
             "name": os.path.basename(repo.working_dir),
-            "index1": commit_id,
-            "index2": repo.commit().hexsha,
-            "diff": json_diff
+            "previous-index": commit_id,
+            "current-index": repo.commit().hexsha,
+            "diff": list(format_diffindex(diff))
         }
     except (GitCommandError, BadName):
         raise NotFound("The git index does not exist")

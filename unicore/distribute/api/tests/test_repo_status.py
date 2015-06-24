@@ -65,9 +65,10 @@ class TestRepositoryDiffResource(ModelBaseTest):
             'repo.storage_path': self.WORKING_DIR,
         })
         self.initial_commit = self.create_commit("initial commit")
-        self.add_file(os.path.join(self.workspace.working_dir, "file-1"))
-        self.add_file(os.path.join(self.workspace.working_dir, "file-2"))
-        self.add_file(os.path.join(self.workspace.working_dir, "file-3"))
+        person1 = TestPerson({'age': 12, 'name': 'Foo'})
+        person2 = TestPerson({'age': 34, 'name': 'Bar'})
+        self.workspace.save(person1, "saving person 1")
+        self.workspace.save(person2, "saving person 2")
         self.create_commit("second commit")
         self.addCleanup(lambda: EG.workspace(self.WORKING_DIR).destroy())
 
@@ -84,11 +85,6 @@ class TestRepositoryDiffResource(ModelBaseTest):
         repo = Repo(self.workspace.working_dir)
         repo.commit(repo.index.commit(message))
         return repo.commit().hexsha
-
-    def add_file(self, filename):
-        repo = Repo(self.workspace.working_dir)
-        open(filename, 'w+').close()
-        repo.index.add([filename])
 
     def test_get(self):
         request = testing.DummyRequest({})
@@ -123,9 +119,10 @@ class TestRepositoryPullResource(ModelBaseTest):
             'repo.storage_path': self.WORKING_DIR,
         })
         self.initial_commit = self.create_commit("initial commit")
-        self.add_file(os.path.join(self.workspace.working_dir, "file-1"))
-        self.add_file(os.path.join(self.workspace.working_dir, "file-2"))
-        self.add_file(os.path.join(self.workspace.working_dir, "file-3"))
+        person1 = TestPerson({'age': 12, 'name': 'Foo'})
+        person2 = TestPerson({'age': 34, 'name': 'Bar'})
+        self.workspace.save(person1, "saving person 1")
+        self.workspace.save(person2, "saving person 2")
         self.create_commit("second commit")
         self.addCleanup(lambda: EG.workspace(self.WORKING_DIR).destroy())
 
@@ -140,13 +137,8 @@ class TestRepositoryPullResource(ModelBaseTest):
 
     def create_commit(self, message):
         repo = Repo(self.workspace.working_dir)
-        repo.commit(repo.index.commit(message))
+        repo.index.commit(message)
         return repo.commit().hexsha
-
-    def add_file(self, filename):
-        repo = Repo(self.workspace.working_dir)
-        open(filename, 'w+').close()
-        repo.index.add([filename])
 
     def test_get(self):
         request = testing.DummyRequest({})
