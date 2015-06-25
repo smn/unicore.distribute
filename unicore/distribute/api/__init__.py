@@ -11,6 +11,7 @@ def main(global_config, **settings):
 
 def includeme(config):
     config.include('cornice')
+    config.scan('.repo_status')
     config.scan('.repos')
 
     settings = config.registry.settings
