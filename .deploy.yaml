@@ -1,0 +1,9 @@
+buildscript: scripts/build.sh
+postinstall: scripts/postinstall.sh
+pip:
+ - gunicorn
+dependencies:
+ - git
+ - libffi-dev
+ - libssl-dev
+
