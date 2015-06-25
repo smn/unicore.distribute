@@ -11,8 +11,8 @@ def main(global_config, **settings):
 
 def includeme(config):
     config.include('cornice')
-    config.scan('.repos')
     config.scan('.repo_status')
+    config.scan('.repos')
 
     settings = config.registry.settings
     proxy_enabled = settings.get('proxy.enabled', 'false').lower()

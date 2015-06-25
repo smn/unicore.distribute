@@ -1,6 +1,5 @@
 import json
 
-from elasticgit import EG
 from git import Repo
 import os
 from elasticgit.commands.avro import serialize
@@ -22,7 +21,6 @@ class TestRepositoryStatusResource(ModelBaseTest):
         self.config = testing.setUp(settings={
             'repo.storage_path': self.WORKING_DIR,
         })
-        self.addCleanup(lambda: EG.workspace(self.WORKING_DIR).destroy())
 
     def add_schema(self, workspace, model_class):
         schema_string = serialize(model_class)
@@ -32,12 +30,6 @@ class TestRepositoryStatusResource(ModelBaseTest):
                 '_schemas',
                 '%(namespace)s.%(name)s.avsc' % schema),
             schema_string, 'Writing the schema.')
-
-    def test_collection_get(self):
-        request = testing.DummyRequest({})
-        resource = RepositoryStatusResource(request)
-        [repo_json] = resource.collection_get()
-        self.assertEqual(repo_json, format_repo_status(self.workspace.repo))
 
     def test_get(self):
         request = testing.DummyRequest({})
@@ -73,7 +65,6 @@ class TestRepositoryDiffResource(ModelBaseTest):
         self.workspace.save(person1, "saving person 1")
         self.workspace.save(person2, "saving person 2")
         self.create_commit("second commit")
-        self.addCleanup(lambda: EG.workspace(self.WORKING_DIR).destroy())
 
     def add_schema(self, workspace, model_class):
         schema_string = serialize(model_class)
@@ -128,7 +119,6 @@ class TestRepositoryPullResource(ModelBaseTest):
         self.workspace.save(person1, "saving person 1")
         self.workspace.save(person2, "saving person 2")
         self.create_commit("second commit")
-        self.addCleanup(lambda: EG.workspace(self.WORKING_DIR).destroy())
 
     def add_schema(self, workspace, model_class):
         schema_string = serialize(model_class)
@@ -181,7 +171,6 @@ class TestRepositoryCloneResource(ModelBaseTest):
         self.workspace.save(person1, "saving person 1")
         self.workspace.save(person2, "saving person 2")
         self.create_commit("second commit")
-        self.addCleanup(lambda: EG.workspace(self.WORKING_DIR).destroy())
 
     def add_schema(self, workspace, model_class):
         schema_string = serialize(model_class)

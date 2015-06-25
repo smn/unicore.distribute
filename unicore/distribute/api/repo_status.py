@@ -6,7 +6,7 @@ from unicore.distribute.utils import (
     clone_repository)
 
 
-@resource(collection_path='status.json', path='/status/{name}.json')
+@resource(path='/repos/{name}/status.json')
 class RepositoryStatusResource(object):
     def __init__(self, request):
         self.request = request
@@ -25,7 +25,7 @@ class RepositoryStatusResource(object):
             os.path.join(storage_path, name)))
 
 
-@resource(path='/status/{name}/{commit_id}.json')
+@resource(path='/repos/{name}/diff/{commit_id}.json')
 class RepositoryDiffResource(object):
     def __init__(self, request):
         self.request = request
@@ -40,7 +40,7 @@ class RepositoryDiffResource(object):
             os.path.join(storage_path, name)), commit_id)
 
 
-@resource(path='/pull/{name}/{commit_id}.json')
+@resource(path='/repos/{name}/pull/{commit_id}.json')
 class RepositoryPullResource(object):
     def __init__(self, request):
         self.request = request
@@ -55,7 +55,7 @@ class RepositoryPullResource(object):
             os.path.join(storage_path, name)), commit_id)
 
 
-@resource(path='/clone/{name}.json')
+@resource(path='/repos/{name}/clone.json')
 class RepositoryCloneResource(object):
     def __init__(self, request):
         self.request = request
