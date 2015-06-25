@@ -1,9 +1,8 @@
 import os
 from cornice.resource import resource, view
 from unicore.distribute.utils import (
-    get_config, format_repo_status, get_repository,
-    get_repositories, get_repository_diff, pull_repository_files,
-    clone_repository)
+    get_config, format_repo_status, get_repository, get_repository_diff,
+    pull_repository_files, clone_repository)
 
 
 @resource(path='/repos/{name}/status.json')
@@ -11,11 +10,6 @@ class RepositoryStatusResource(object):
     def __init__(self, request):
         self.request = request
         self.config = get_config(request)
-
-    def collection_get(self):
-        storage_path = self.config.get('repo.storage_path')
-        return [format_repo_status(repo) for repo
-                in get_repositories(storage_path)]
 
     @view(renderer='json')
     def get(self):
