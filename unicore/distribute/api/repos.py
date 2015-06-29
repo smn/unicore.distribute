@@ -110,6 +110,8 @@ def initialize_repo_index(event):
     if im.index_exists(sm.active_branch()):
         im.destroy_index(sm.active_branch())
     im.create_index(sm.active_branch())
+    while not im.index_ready(sm.active_branch()):
+        pass
 
     try:
         for model_class, mapping in model_mappings:
