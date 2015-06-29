@@ -3,8 +3,7 @@ import json
 
 from avro.io import validate
 
-from colander import (
-    MappingSchema, SchemaNode, String, Invalid, Mapping)
+from colander import MappingSchema, SchemaNode, String, Invalid
 
 from unicore.distribute.utils import get_config, get_repository, get_schema
 
