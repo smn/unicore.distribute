@@ -12,10 +12,7 @@ class RepositoryEvent(object):
 
 
 class RepositoryCloned(RepositoryEvent):
-
-    def __init__(self, mapping, *args, **kwargs):
-        super(RepositoryCloned, self).__init__(*args, **kwargs)
-        self.mapping = mapping
+    pass
 
 
 class RepositoryUpdated(RepositoryEvent):

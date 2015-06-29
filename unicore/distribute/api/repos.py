@@ -21,7 +21,7 @@ from unicore.distribute.utils import (
     format_content_type, format_content_type_object,
     save_content_type_object, delete_content_type_object,
     format_diffindex, get_index_prefix, load_model_class,
-    get_es)
+    get_es, get_mapping, list_content_types)
 
 
 @resource(collection_path='/repos.json', path='/repos/{name}.json')
@@ -45,12 +45,10 @@ class RepositoryResource(object):
         try:
             repo = EG.clone_repo(
                 repo_url, os.path.join(storage_path, repo_name))
-            model_mappings = self.request.validated['models']
             self.request.registry.notify(
                 RepositoryCloned(
                     config=self.config,
-                    repo=repo,
-                    mapping=model_mappings))
+                    repo=repo))
             self.request.response.headers['Location'] = self.request.route_url(
                 'repositoryresource', name=repo_name)
             self.request.response.status = 301
@@ -97,10 +95,10 @@ class RepositoryResource(object):
 
 def initialize_repo_index(event):
     repo = event.repo
-    model_mappings = map(
-        lambda (content_type, mapping): (load_model_class(repo, content_type),
-                                         mapping),
-        event.mapping.iteritems())
+    # load models and mappings before creating index in case of errors
+    model_mappings = [(load_model_class(repo, content_type),
+                       get_mapping(repo, content_type))
+                      for content_type in list_content_types(repo)]
     sm = StorageManager(repo)
     im = ESManager(
         storage_manager=sm,
@@ -115,11 +113,8 @@ def initialize_repo_index(event):
 
     try:
         for model_class, mapping in model_mappings:
-            if mapping is None:
-                im.setup_mapping(sm.active_branch(), model_class)
-            else:
-                im.setup_custom_mapping(
-                    sm.active_branch(), model_class, mapping)
+            im.setup_custom_mapping(
+                sm.active_branch(), model_class, mapping)
 
         for model_class, _ in model_mappings:
             for model in sm.iterate(model_class):

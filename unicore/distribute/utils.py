@@ -125,6 +125,20 @@ def list_schemas(repo):
     return schemas
 
 
+def list_content_types(repo):
+    """
+    Return a list of content types in a repository.
+
+    :param Repo repo:
+        The git repository.
+    :returns: list
+    """
+    schema_files = glob.glob(
+        os.path.join(repo.working_dir, '_schemas', '*.avsc'))
+    return [os.path.splitext(os.path.basename(schema_file))[0]
+            for schema_file in schema_files]
+
+
 def get_schema(repo, content_type):
     """
     Return a schema for a content type in a repository.
@@ -142,6 +156,24 @@ def get_schema(repo, content_type):
             return avro.schema.parse(data)
     except IOError:  # pragma: no cover
         raise NotFound('Schema does not exist.')
+
+
+def get_mapping(repo, content_type):
+    """
+    Return an ES mapping for a content type in a repository.
+
+    :param Repo repo:
+        This git repository.
+    :returns: dict
+    """
+    try:
+        with open(
+            os.path.join(repo.working_dir,
+                         '_mappings',
+                         '%s.json' % (content_type,)), 'r') as fp:
+            return json.load(fp)
+    except IOError:
+        raise NotFound('Mapping does not exist.')
 
 
 def format_repo(repo):
