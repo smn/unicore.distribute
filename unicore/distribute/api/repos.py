@@ -129,47 +129,14 @@ def initialize_repo_index(event):
 
 def update_repo_index(event):
     repo = event.repo
-    changes = event.changes
     workspace = Workspace(
         repo=repo,
         es={'urls': [event.config.get('es.host', 'http://localhost:9200')]},
         index_prefix=get_index_prefix(repo.working_dir))
-    sm = workspace.sm
-    im = workspace.im
 
     old_branch = repo.head.ref
     repo.heads[event.branch].checkout()
-
-    if len(repo.remotes) > 1 and any(changes):
-        workspace.reindex_diff(changes)
-        return
-
-    if any(changes.iter_change_type('R')):
-        workspace.reindex_diff(changes)
-        return
-
-    # unindex deleted blobs
-    for diff in changes.iter_change_type('D'):
-        path_info = sm.path_info(diff.a_blob.path)
-        if path_info is None:
-            continue
-        im.raw_unindex(*path_info)
-
-    # reindex added blobs
-    for diff in changes.iter_change_type('A'):
-        path_info = sm.path_info(diff.b_blob.path)
-        if path_info is None:
-            continue
-        obj = sm.get(*path_info)
-        im.index(obj)
-
-    # reindex modified blobs
-    for diff in changes.iter_change_type('M'):
-        path_info = sm.path_info(diff.a_blob.path)
-        if path_info is None:
-            continue
-        obj = sm.get(*path_info)
-
+    workspace.index_diff(event.changes)
     old_branch.checkout()
 
 
