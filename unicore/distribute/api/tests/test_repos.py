@@ -19,13 +19,14 @@ from git.exc import GitCommandError
 from pyramid import testing
 from pyramid.exceptions import NotFound
 
-from mock import patch
+from mock import patch, DEFAULT
 import avro
 
 from unicore.distribute.api.repos import (
     RepositoryResource, ContentTypeResource, initialize_repo_index,
-    update_repo_index)
-from unicore.distribute.events import RepositoryCloned, RepositoryUpdated
+    update_repo_index, index_content_type_object)
+from unicore.distribute.events import (
+    RepositoryCloned, RepositoryUpdated, ContentTypeObjectUpdated)
 from unicore.distribute.utils import (
     format_repo, format_content_type, format_content_type_object)
 from unicore.distribute.tests.base import DistributeTestCase
@@ -373,8 +374,15 @@ class TestContentTypeResource(DistributeTestCase):
         }
         request.registry = self.config.registry
         resource = ContentTypeResource(request)
-        object_data = resource.put()
-        self.assertEqual(TestPerson(object_data), self.person)
+
+        with patch.object(request.registry, 'notify') as mocked_notify:
+            object_data = resource.put()
+            self.assertEqual(TestPerson(object_data), self.person)
+            (event,) = mocked_notify.call_args[0]
+            self.assertIsInstance(event, ContentTypeObjectUpdated)
+            self.assertEqual(event.repo, self.workspace.repo)
+            self.assertEqual(event.model, self.person)
+            self.assertEqual(event.change_type, 'update')
 
     def test_delete(self):
         request = testing.DummyRequest()
@@ -384,8 +392,15 @@ class TestContentTypeResource(DistributeTestCase):
             'uuid': self.person.uuid,
         }
         resource = ContentTypeResource(request)
-        object_data = resource.delete()
-        self.assertEqual(TestPerson(object_data), self.person)
+
+        with patch.object(request.registry, 'notify') as mocked_notify:
+            object_data = resource.delete()
+            self.assertEqual(TestPerson(object_data), self.person)
+            (event,) = mocked_notify.call_args[0]
+            self.assertIsInstance(event, ContentTypeObjectUpdated)
+            self.assertEqual(event.repo, self.workspace.repo)
+            self.assertEqual(event.model, self.person)
+            self.assertEqual(event.change_type, 'delete')
 
         request = testing.DummyRequest({})
         request.matchdict = {
@@ -395,3 +410,17 @@ class TestContentTypeResource(DistributeTestCase):
         }
         resource = ContentTypeResource(request)
         self.assertRaises(NotFound, resource.get)
+
+    @patch.multiple(ESManager, unindex=DEFAULT, index=DEFAULT)
+    def test_index_content_type_object(self, unindex, index):
+        event = ContentTypeObjectUpdated(
+            repo=self.workspace.repo,
+            model=self.person,
+            change_type='update',
+            config=self.config.registry.settings)
+        index_content_type_object(event)
+        index.assert_called_with(self.person)
+
+        event.change_type = 'delete'
+        index_content_type_object(event)
+        unindex.assert_called_with(self.person)
