@@ -2,15 +2,15 @@ import os
 
 from unittest import TestCase
 
-from slugify import slugify
-
 from elasticgit import EG
+
+from unicore.distribute.utils import get_index_prefix
 
 
 class DistributeTestCase(TestCase):
 
     destroy = 'KEEP_REPO' not in os.environ
-    working_dir = '.test_repos/'
+    WORKING_DIR = '.test_repos/'
 
     def mk_workspace(self, working_dir=None,
                      name=None,
@@ -20,8 +20,8 @@ class DistributeTestCase(TestCase):
                      author_name='Test Kees',
                      author_email='kees@example.org'):  # pragma: no cover
         name = name or self.id()
-        working_dir = working_dir or self.working_dir
-        index_prefix = index_prefix or slugify(name)
+        working_dir = working_dir or self.WORKING_DIR
+        index_prefix = index_prefix or get_index_prefix(name)
         auto_destroy = auto_destroy or self.destroy
         workspace = EG.workspace(os.path.join(working_dir, name), es={
             'urls': [url],

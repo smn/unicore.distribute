@@ -104,7 +104,7 @@ def get_index_prefix(path):
         The path to the repositoy
     :returns: string
     """
-    return os.path.basename(path)
+    return os.path.basename(path).lower()
 
 
 def list_schemas(repo):

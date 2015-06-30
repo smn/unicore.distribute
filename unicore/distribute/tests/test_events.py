@@ -2,14 +2,13 @@ from pyramid import testing
 
 from git import Repo
 
-from elasticgit.tests.base import ModelBaseTest
-
 from unicore.distribute.events import (
     RepositoryEvent, RepositoryCloned, RepositoryUpdated,
     ContentTypeObjectUpdated)
+from unicore.distribute.tests.base import DistributeTestCase
 
 
-class TestEvents(ModelBaseTest):
+class TestEvents(DistributeTestCase):
 
     def setUp(self):
         self.workspace = self.mk_workspace()
