@@ -41,31 +41,6 @@ class TestRepositoryResource(DistributeTestCase):
         })
         self.config.include('unicore.distribute.api')
 
-    def add_schema(self, workspace, model_class):
-        schema_string = serialize(model_class)
-        schema = json.loads(schema_string)
-        workspace.sm.store_data(
-            os.path.join(
-                '_schemas',
-                '%(namespace)s.%(name)s.avsc' % schema),
-            schema_string, 'Writing the schema.')
-
-    def add_mapping(self, workspace, model_class):
-        im = ESManager(None, None, None)
-        mapping = im.get_mapping_type(model_class).get_mapping()
-        workspace.sm.store_data(
-            os.path.join(
-                '_mappings',
-                '%s.%s.json' % (model_class.__module__,
-                                model_class.__name__)),
-            json.dumps(mapping), 'Writing the mapping.')
-
-    def mk_model_workspace(self, model_class, *args, **kwargs):
-        workspace = self.mk_workspace(*args, **kwargs)
-        self.add_schema(workspace, model_class)
-        self.add_mapping(workspace, model_class)
-        return workspace
-
     def create_upstream_for(self, workspace, create_remote=True,
                             remote_name='origin',
                             suffix='upstream'):
