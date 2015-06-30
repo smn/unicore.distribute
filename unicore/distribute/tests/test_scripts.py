@@ -57,7 +57,10 @@ class TestScripts(ToolBaseTest):
             }
         }), 'http://www.example.org')
         mocked_pull_repo.assert_called()
-        (ws_call, remote_ws_call) = mocked_pull_repo.call_args_list
+        # NOTE: the order of get_repositories is arbitrary
+        (ws_call, remote_ws_call) = sorted(
+            mocked_pull_repo.call_args_list,
+            key=lambda call: call[0][1].working_dir)
         (args, kwargs) = ws_call
         (env, repo) = args
         self.assertEqual(repo, self.workspace.repo)
