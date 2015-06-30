@@ -41,9 +41,9 @@ class TestEvents(DistributeTestCase):
                          self.get_handlers_for(self.config, RepositoryCloned))
         self.assertNotIn('update_repo_index',
                          self.get_handlers_for(self.config, RepositoryUpdated))
-        self.assertNotIn('index_content_type_object',
-                         self.get_handlers_for(
-                            self.config, ContentTypeObjectUpdated))
+        self.assertNotIn(
+            'index_content_type_object',
+            self.get_handlers_for(self.config, ContentTypeObjectUpdated))
 
         config = testing.setUp(settings={
             'es.indexing_enabled': 'true'
