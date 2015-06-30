@@ -12,6 +12,7 @@ from elasticgit.search import ESManager
 from elasticgit.tests.base import TestPerson
 from elasticgit.commands.avro import serialize
 from elasticgit.utils import fqcn
+from elasticgit.workspace import Workspace
 
 from git.exc import GitCommandError
 
@@ -22,11 +23,11 @@ from mock import patch
 import avro
 
 from unicore.distribute.api.repos import (
-    RepositoryResource, ContentTypeResource, initialize_repo_index)
+    RepositoryResource, ContentTypeResource, initialize_repo_index,
+    update_repo_index)
 from unicore.distribute.events import RepositoryCloned, RepositoryUpdated
 from unicore.distribute.utils import (
-    format_repo, format_content_type, format_content_type_object,
-    get_index_prefix)
+    format_repo, format_content_type, format_content_type_object)
 from unicore.distribute.tests.base import DistributeTestCase
 
 
@@ -114,7 +115,7 @@ class TestRepositoryResource(DistributeTestCase):
                 '/repos/%s.json' % (api_repo_name,))
             self.assertEqual(request.response.status_code, 301)
             mocked_notify.assert_called()
-            [event] = mocked_notify.call_args_list[0][0]
+            (event,) = mocked_notify.call_args[0]
             self.assertIsInstance(event, RepositoryCloned)
             self.assertIs(event.config, self.config.registry.settings)
             self.assertEqual(
@@ -142,22 +143,19 @@ class TestRepositoryResource(DistributeTestCase):
             self.assertEqual(
                 len(self.workspace.S(TestPerson).filter(name='foo')), 1)
 
-    def test_initialize_repo_index_error(self):
+    @patch.object(
+        ESManager, 'setup_custom_mapping', side_effect=ElasticsearchException)
+    def test_initialize_repo_index_error(self, mocked_setup_mapping):
         im = self.workspace.im
         sm = self.workspace.sm
         event = RepositoryCloned(
             repo=self.workspace.repo,
             config=self.config.registry.settings)
-        patch_setup_mapping = patch.object(
-                ESManager,
-                'setup_custom_mapping',
-                side_effect=ElasticsearchException)
-        patch_destroy_index = patch.object(
+
+        with patch.object(
                 ESManager,
                 'destroy_index',
-                wraps=im.destroy_index)
-
-        with patch_setup_mapping, patch_destroy_index as mocked_destroy:
+                wraps=im.destroy_index) as mocked_destroy:
             self.assertRaises(
                 ElasticsearchException, initialize_repo_index, event)
             self.assertFalse(im.index_exists(sm.active_branch()))
@@ -215,14 +213,31 @@ class TestRepositoryResource(DistributeTestCase):
             resource.post()
             mock_pull.assert_called_with(branch_name='foo',
                                          remote_name='bar')
-            (call,) = mocked_notify.call_args_list
-            (args, kwargs) = call
-            (event,) = args
+            (call1, call2) = mocked_notify.call_args_list
+            (event,) = call1[0]
+            self.assertIsInstance(event, RepositoryUpdated)
+            self.assertEqual(event.repo, self.workspace.repo)
+            self.assertEqual(event.branch, 'foo')
+            self.assertTrue(event.changes)
+            (event,) = call2[0]
             self.assertEqual(event.event_type, 'repo.push')
             self.assertEqual(event.payload, {
                 'repo': repo_name,
                 'url': 'foo',
             })
+
+    @patch.object(Workspace, 'index_diff')
+    def test_update_repo_index(self, mocked_index_diff):
+        self.workspace.repo.create_head('foo')
+        event = RepositoryUpdated(
+            repo=self.workspace.repo,
+            config=self.config.registry.settings,
+            branch='foo',
+            changes='diffindex')
+
+        update_repo_index(event)
+        mocked_index_diff.assert_called_with('diffindex')
+        self.assertEqual(event.repo.active_branch.name, 'master')
 
     def test_pull_additions(self):
         upstream_workspace = self.create_upstream_for(self.workspace)
