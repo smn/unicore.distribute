@@ -242,6 +242,7 @@ class TestRepositoryResource(DistributeTestCase):
     def test_pull_additions(self):
         upstream_workspace = self.create_upstream_for(self.workspace)
         self.add_schema(upstream_workspace, TestPerson)
+        self.add_mapping(upstream_workspace, TestPerson)
         person1 = TestPerson({'age': 1, 'name': 'person1'})
         upstream_workspace.save(person1, 'Adding person1.')
 
@@ -262,6 +263,7 @@ class TestRepositoryResource(DistributeTestCase):
     def test_pull_removals(self):
         upstream_workspace = self.create_upstream_for(self.workspace)
         self.add_schema(upstream_workspace, TestPerson)
+        self.add_mapping(upstream_workspace, TestPerson)
         person1 = TestPerson({'age': 1, 'name': 'person1'})
         upstream_workspace.save(person1, 'Adding person1.')
         self.workspace.pull()
@@ -284,6 +286,7 @@ class TestRepositoryResource(DistributeTestCase):
     def test_pull_renames(self):
         upstream_workspace = self.create_upstream_for(self.workspace)
         self.add_schema(upstream_workspace, TestPerson)
+        self.add_mapping(upstream_workspace, TestPerson)
         upstream_workspace.sm.store_data(
             'README.rst', 'the readme', 'Writing the readme.')
         self.workspace.pull()
@@ -309,6 +312,7 @@ class TestRepositoryResource(DistributeTestCase):
     def test_pull_modified(self):
         upstream_workspace = self.create_upstream_for(self.workspace)
         self.add_schema(upstream_workspace, TestPerson)
+        self.add_mapping(upstream_workspace, TestPerson)
         person1 = TestPerson({'age': 1, 'name': 'person1'})
         upstream_workspace.save(person1, 'Adding person1.')
         self.workspace.pull()
