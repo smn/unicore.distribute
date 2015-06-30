@@ -9,7 +9,8 @@ from ConfigParser import ConfigParser
 from pyramid.exceptions import NotFound
 
 from git import Repo
-from git.exc import InvalidGitRepositoryError, NoSuchPathError, GitCommandError
+from git.exc import (
+    InvalidGitRepositoryError, NoSuchPathError, GitCommandError, BadName)
 
 import avro.schema
 
@@ -23,6 +24,7 @@ class UCConfigParser(ConfigParser):
     """
     A config parser that understands lists and dictionaries.
     """
+
     def get_list(self, section, option):
         """
         This allows for loading of Pyramid list style configuration
@@ -79,7 +81,7 @@ def get_repositories(path):
     return [get_repository(os.path.join(path, subdir))
             for subdir in os.listdir(path)
             if os.path.isdir(
-                os.path.join(path, subdir, '.git'))]
+            os.path.join(path, subdir, '.git'))]
 
 
 def get_repository(path):
@@ -149,9 +151,9 @@ def get_schema(repo, content_type):
     """
     try:
         with open(
-            os.path.join(repo.working_dir,
-                         '_schemas',
-                         '%s.avsc' % (content_type,)), 'r') as fp:
+                os.path.join(repo.working_dir,
+                             '_schemas',
+                             '%s.avsc' % (content_type,)), 'r') as fp:
             data = fp.read()
             return avro.schema.parse(data)
     except IOError:  # pragma: no cover
@@ -310,6 +312,27 @@ def format_content_type_object(repo, content_type, uuid):
         raise NotFound('Object does not exist.')
 
 
+def format_repo_status(repo):
+    """
+    Return a dictionary representing the repository status
+
+    It returns ``None`` for things we do not support or are not
+    relevant.
+
+    :param str repo_name:
+        The name of the repository.
+    :returns: dict
+
+    """
+    commit = repo.commit()
+    return {
+        'name': os.path.basename(repo.working_dir),
+        'commit': commit.hexsha,
+        'timestamp': datetime.fromtimestamp(
+            commit.committed_date).isoformat(),
+    }
+
+
 def save_content_type_object(repo, schema, uuid, data):
     """
     Save an object as a certain content type
@@ -367,3 +390,69 @@ def load_model_class(repo, content_type):
     """
     schema = get_schema(repo, content_type).to_json()
     return deserialize(schema, module_name=schema['namespace'])
+
+
+def add_model_item_to_pull_dict(storage_manager, path, pull_dict):
+    if path.endswith(".json"):
+        model = storage_manager.load(path)
+        pull_dict[model.__module__ + "." +
+                  model.__class__.__name__].append(dict(model))
+        return True
+    return False
+
+
+def get_repository_diff(repo, commit_id):
+    try:
+        old_commit = repo.commit(commit_id)
+        diff = old_commit.diff(repo.head)
+
+        return {
+            "name": os.path.basename(repo.working_dir),
+            "previous-index": commit_id,
+            "current-index": repo.commit().hexsha,
+            "diff": list(format_diffindex(diff))
+        }
+    except (GitCommandError, BadName):
+        raise NotFound("The git index does not exist")
+
+
+def pull_repository_files(repo, commit_id):
+    changed_files = {}
+    for name in list_content_types(repo):
+        changed_files[name] = []
+
+    try:
+        old_commit = repo.commit(commit_id)
+        diff = old_commit.diff(repo.head)
+
+        sm = StorageManager(repo)
+        for diff_added in diff.iter_change_type('A'):
+            add_model_item_to_pull_dict(
+                sm, diff_added.b_blob.path, changed_files)
+
+        for diff_modified in diff.iter_change_type('M'):
+            add_model_item_to_pull_dict(
+                sm, diff_modified.b_blob.path, changed_files)
+
+        json_diff = []
+        for diff_added in diff.iter_change_type('R'):
+            json_diff.append(format_diff_R(diff_added))
+
+        for diff_removed in diff.iter_change_type('D'):
+            json_diff.append(format_diff_D(diff_removed))
+
+        changed_files["other"] = json_diff
+        changed_files["commit"] = repo.head.commit.hexsha
+        return changed_files
+
+    except (GitCommandError, BadName):
+        raise NotFound("The git index does not exist")
+
+
+def clone_repository(repo):
+    files = {}
+    for name in list_content_types(repo):
+        files[name] = format_content_type(repo, name)
+
+    files['commit'] = repo.head.commit.hexsha
+    return files

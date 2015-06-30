@@ -7,3 +7,4 @@ pyramid-celery>=2.0.0rc4
 cornice==1.0.0
 colander==1.0
 requests
+python-slugify
