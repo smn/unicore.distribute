@@ -73,12 +73,17 @@ class TestRepositoryResource(DistributeTestCase):
         request = testing.DummyRequest({})
         request.validated = {
             'repo_url': self.remote_workspace.working_dir,
+            'repo_name': None
         }
         # Cleanup the repo created by the API on tear down
         self.addCleanup(
             lambda: EG.workspace(
                 os.path.join(
                     self.WORKING_DIR, api_repo_name)).destroy())
+        self.addCleanup(
+            lambda: EG.workspace(
+                os.path.join(
+                    self.WORKING_DIR, 'foo-bar')).destroy())
         request.route_url = lambda route, name: (
             '/repos/%s.json' % (api_repo_name,))
         request.errors = Errors()
@@ -97,6 +102,12 @@ class TestRepositoryResource(DistributeTestCase):
             self.assertEqual(
                 event.repo.working_dir,
                 os.path.abspath(os.path.join(self.WORKING_DIR, api_repo_name)))
+            # check that the repo can be cloned with a different name
+            request.validated['repo_name'] = 'foo-bar'
+            resource.collection_post()
+            self.assertEqual(request.response.status_code, 301)
+            self.assertTrue(
+                os.path.exists(os.path.join(self.WORKING_DIR, 'foo-bar')))
 
     def test_initialize_repo_index(self):
         im = self.workspace.im
@@ -144,6 +155,7 @@ class TestRepositoryResource(DistributeTestCase):
         request = testing.DummyRequest({})
         request.validated = {
             'repo_url': 'git://example.org/bar.git',
+            'repo_name': None
         }
         request.errors = Errors()
         resource = RepositoryResource(request)
