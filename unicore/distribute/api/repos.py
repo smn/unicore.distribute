@@ -39,9 +39,12 @@ class RepositoryResource(object):
     def collection_post(self):
         storage_path = self.config.get('repo.storage_path')
         repo_url = self.request.validated['repo_url']
-        repo_url_info = urlparse(repo_url)
-        repo_name_dot_git = os.path.basename(repo_url_info.path)
-        repo_name = repo_name_dot_git.partition('.git')[0]
+        repo_name = self.request.validated['repo_name']
+        if not repo_name:
+            repo_url_info = urlparse(repo_url)
+            repo_name_dot_git = os.path.basename(repo_url_info.path)
+            repo_name = repo_name_dot_git.partition('.git')[0]
+
         try:
             repo = EG.clone_repo(
                 repo_url, os.path.join(storage_path, repo_name))

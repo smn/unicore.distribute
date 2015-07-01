@@ -10,7 +10,8 @@ from colander import Invalid
 from cornice.errors import Errors
 
 from unicore.distribute.api.validators import (
-    validate_schema, repo_url_type_schema_validator, CreateRepoColanderSchema)
+    validate_schema, repo_url_type_schema_validator, CreateRepoColanderSchema,
+    repo_name_validator)
 
 from pyramid import testing
 
@@ -93,8 +94,15 @@ class TestValidators(ModelBaseTest):
         self.assertEqual(
             None, repo_url_type_schema_validator(None, 'git://foo/bar.git'))
 
+    def test_repo_name_validator(self):
+        self.assertRaises(Invalid, repo_name_validator, None, '/foo/bar.git')
+        self.assertRaises(Invalid, repo_name_validator, None, '.')
+        self.assertRaises(Invalid, repo_name_validator, None, '..')
+        self.assertEqual(None, repo_name_validator(None, 'abcd1234.-_'))
+
     def test_create_repo_colander_schema(self):
         schema = CreateRepoColanderSchema()
         valid = schema.deserialize({'repo_url': 'http://example.org/foo.git'})
-        self.assertEqual(valid, {'repo_url': 'http://example.org/foo.git'})
+        self.assertEqual(valid, {'repo_url': 'http://example.org/foo.git',
+                                 'repo_name': None})
         self.assertRaises(Invalid, schema.deserialize, {'repo_url': 'foo'})
