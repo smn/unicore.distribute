@@ -19,10 +19,11 @@ class TestProxy(TestCase):
                       method='GET',
                       response_content='',
                       content_type='application/json',
-                      encoding='utf-8'):
+                      encoding='utf-8',
+                      parts=''):
         request = Request.blank('/', base_url=url, method=method)
         request.matchdict = {
-            'parts': '',
+            'parts': parts,
         }
 
         proxy_view = ProxyView(request, url)
@@ -83,6 +84,12 @@ class TestProxy(TestCase):
         resp = proxy(request)
         self.assertEqual(resp.status_code, 404)
 
+    def test_url(self):
+        proxy_view = self.mk_proxy_view(parts='foo')
+        proxy_view.do_GET()
+        proxy_view.mk_request.assert_called_with(
+            'GET', 'http://example.org/foo', data='')
+
     @patch.object(ProxyView, 'mk_request')
     def test_proxy_setup(self, mocked_request):
         response = Response()
@@ -90,7 +97,8 @@ class TestProxy(TestCase):
         response._content = 'hello world'
         response.encoding = 'utf-8'
         mocked_request.return_value = response
-        settings = {'proxy.enabled': 'true'}
+        settings = {'proxy.enabled': 'true',
+                    'proxy.path': '/esapi'}
         testing.setUp(settings=settings)
         app = TestApp(main({}, **settings))
         response = app.get('/esapi/')

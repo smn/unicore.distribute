@@ -9,9 +9,12 @@ from ConfigParser import ConfigParser
 from pyramid.exceptions import NotFound
 
 from git import Repo
-from git.exc import InvalidGitRepositoryError, NoSuchPathError, GitCommandError
+from git.exc import (
+    InvalidGitRepositoryError, NoSuchPathError, GitCommandError, BadName)
 
 import avro.schema
+
+from elasticutils import get_es as get_es_object
 
 from elasticgit.commands.avro import deserialize
 from elasticgit.storage import StorageManager
@@ -21,6 +24,7 @@ class UCConfigParser(ConfigParser):
     """
     A config parser that understands lists and dictionaries.
     """
+
     def get_list(self, section, option):
         """
         This allows for loading of Pyramid list style configuration
@@ -77,7 +81,7 @@ def get_repositories(path):
     return [get_repository(os.path.join(path, subdir))
             for subdir in os.listdir(path)
             if os.path.isdir(
-                os.path.join(path, subdir, '.git'))]
+            os.path.join(path, subdir, '.git'))]
 
 
 def get_repository(path):
@@ -92,6 +96,17 @@ def get_repository(path):
         return Repo(path)
     except (NoSuchPathError, InvalidGitRepositoryError):
         raise NotFound('Repository not found.')
+
+
+def get_index_prefix(path):
+    """
+    Return the Elasticsearch index prefix for the repo at path.
+
+    :param str repo_path:
+        The path to the repositoy
+    :returns: string
+    """
+    return os.path.basename(path).lower()
 
 
 def list_schemas(repo):
@@ -112,6 +127,20 @@ def list_schemas(repo):
     return schemas
 
 
+def list_content_types(repo):
+    """
+    Return a list of content types in a repository.
+
+    :param Repo repo:
+        The git repository.
+    :returns: list
+    """
+    schema_files = glob.glob(
+        os.path.join(repo.working_dir, '_schemas', '*.avsc'))
+    return [os.path.splitext(os.path.basename(schema_file))[0]
+            for schema_file in schema_files]
+
+
 def get_schema(repo, content_type):
     """
     Return a schema for a content type in a repository.
@@ -122,13 +151,31 @@ def get_schema(repo, content_type):
     """
     try:
         with open(
-            os.path.join(repo.working_dir,
-                         '_schemas',
-                         '%s.avsc' % (content_type,)), 'r') as fp:
+                os.path.join(repo.working_dir,
+                             '_schemas',
+                             '%s.avsc' % (content_type,)), 'r') as fp:
             data = fp.read()
             return avro.schema.parse(data)
     except IOError:  # pragma: no cover
         raise NotFound('Schema does not exist.')
+
+
+def get_mapping(repo, content_type):
+    """
+    Return an ES mapping for a content type in a repository.
+
+    :param Repo repo:
+        This git repository.
+    :returns: dict
+    """
+    try:
+        with open(
+            os.path.join(repo.working_dir,
+                         '_mappings',
+                         '%s.json' % (content_type,)), 'r') as fp:
+            return json.load(fp)
+    except IOError:
+        raise NotFound('Mapping does not exist.')
 
 
 def format_repo(repo):
@@ -241,8 +288,7 @@ def format_content_type(repo, content_type):
     :returns: list
     """
     storage_manager = StorageManager(repo)
-    schema = get_schema(repo, content_type).to_json()
-    model_class = deserialize(schema, module_name=schema['namespace'])
+    model_class = load_model_class(repo, content_type)
     return [dict(model_obj)
             for model_obj in storage_manager.iterate(model_class)]
 
@@ -260,11 +306,31 @@ def format_content_type_object(repo, content_type, uuid):
     """
     try:
         storage_manager = StorageManager(repo)
-        schema = get_schema(repo, content_type).to_json()
-        model_class = deserialize(schema, module_name=schema['namespace'])
+        model_class = load_model_class(repo, content_type)
         return dict(storage_manager.get(model_class, uuid))
     except GitCommandError:
         raise NotFound('Object does not exist.')
+
+
+def format_repo_status(repo):
+    """
+    Return a dictionary representing the repository status
+
+    It returns ``None`` for things we do not support or are not
+    relevant.
+
+    :param str repo_name:
+        The name of the repository.
+    :returns: dict
+
+    """
+    commit = repo.commit()
+    return {
+        'name': os.path.basename(repo.working_dir),
+        'commit': commit.hexsha,
+        'timestamp': datetime.fromtimestamp(
+            commit.committed_date).isoformat(),
+    }
 
 
 def save_content_type_object(repo, schema, uuid, data):
@@ -284,8 +350,7 @@ def delete_content_type_object(repo, content_type, uuid):
     Delete an object of a certain content type
     """
     storage_manager = StorageManager(repo)
-    schema = get_schema(repo, content_type).to_json()
-    model_class = deserialize(schema, module_name=schema['namespace'])
+    model_class = load_model_class(repo, content_type)
     model = storage_manager.get(model_class, uuid)
     commit = storage_manager.delete(model, 'Deleted via DELETE request.')
     return commit, model
@@ -299,3 +364,95 @@ def get_config(request):  # pragma: no cover
         The HTTP request
     """
     return request.registry.settings
+
+
+def get_es(config):
+    """
+    Return the :py:class:`elasticsearch.Elasticsearch` object based
+    on the config.
+
+    :param dict config:
+        The app configuration
+    :returns: Elasticsearch
+    """
+    return get_es_object(urls=[config.get('es.host', 'http://localhost:9200')])
+
+
+def load_model_class(repo, content_type):
+    """
+    Return a model class for a content type in a repository.
+
+    :param Repo repo:
+        The git repository.
+    :param str content_type:
+        The content type to list
+    :returns: class
+    """
+    schema = get_schema(repo, content_type).to_json()
+    return deserialize(schema, module_name=schema['namespace'])
+
+
+def add_model_item_to_pull_dict(storage_manager, path, pull_dict):
+    if path.endswith(".json"):
+        model = storage_manager.load(path)
+        pull_dict[model.__module__ + "." +
+                  model.__class__.__name__].append(dict(model))
+        return True
+    return False
+
+
+def get_repository_diff(repo, commit_id):
+    try:
+        old_commit = repo.commit(commit_id)
+        diff = old_commit.diff(repo.head)
+
+        return {
+            "name": os.path.basename(repo.working_dir),
+            "previous-index": commit_id,
+            "current-index": repo.commit().hexsha,
+            "diff": list(format_diffindex(diff))
+        }
+    except (GitCommandError, BadName):
+        raise NotFound("The git index does not exist")
+
+
+def pull_repository_files(repo, commit_id):
+    changed_files = {}
+    for name in list_content_types(repo):
+        changed_files[name] = []
+
+    try:
+        old_commit = repo.commit(commit_id)
+        diff = old_commit.diff(repo.head)
+
+        sm = StorageManager(repo)
+        for diff_added in diff.iter_change_type('A'):
+            add_model_item_to_pull_dict(
+                sm, diff_added.b_blob.path, changed_files)
+
+        for diff_modified in diff.iter_change_type('M'):
+            add_model_item_to_pull_dict(
+                sm, diff_modified.b_blob.path, changed_files)
+
+        json_diff = []
+        for diff_added in diff.iter_change_type('R'):
+            json_diff.append(format_diff_R(diff_added))
+
+        for diff_removed in diff.iter_change_type('D'):
+            json_diff.append(format_diff_D(diff_removed))
+
+        changed_files["other"] = json_diff
+        changed_files["commit"] = repo.head.commit.hexsha
+        return changed_files
+
+    except (GitCommandError, BadName):
+        raise NotFound("The git index does not exist")
+
+
+def clone_repository(repo):
+    files = {}
+    for name in list_content_types(repo):
+        files[name] = format_content_type(repo, name)
+
+    files['commit'] = repo.head.commit.hexsha
+    return files
