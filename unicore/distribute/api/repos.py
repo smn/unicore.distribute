@@ -21,7 +21,7 @@ from unicore.distribute.utils import (
     format_content_type, format_content_type_object,
     save_content_type_object, delete_content_type_object,
     format_diffindex, get_index_prefix, load_model_class,
-    get_es, get_mapping, list_content_types)
+    get_es, get_es_settings, get_mapping, list_content_types)
 
 
 @resource(collection_path='/repos.json', path='/repos/{name}.json')
@@ -95,6 +95,19 @@ class RepositoryResource(object):
                 }))
         return list(format_diffindex(changes))
 
+    def delete(self):
+        name = self.request.matchdict['name']
+        storage_path = self.config.get('repo.storage_path')
+        repo = get_repository(os.path.join(storage_path, name))
+        workspace = Workspace(
+            repo=repo,
+            es=get_es_settings(self.config),
+            index_prefix=get_index_prefix(repo.working_dir))
+        # NOTE: destroys both the repo and index, if it exists,
+        # irrespective of es.indexing_enabled value.
+        workspace.destroy()
+        self.request.response.status = 204
+
 
 def initialize_repo_index(event):
     repo = event.repo
@@ -131,7 +144,7 @@ def update_repo_index(event):
     repo = event.repo
     workspace = Workspace(
         repo=repo,
-        es={'urls': [event.config.get('es.host', 'http://localhost:9200')]},
+        es=get_es_settings(event.config),
         index_prefix=get_index_prefix(repo.working_dir))
 
     old_branch = repo.head.ref

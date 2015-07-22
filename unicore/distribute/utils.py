@@ -366,6 +366,19 @@ def get_config(request):  # pragma: no cover
     return request.registry.settings
 
 
+def get_es_settings(config):
+    """
+    Return the Elasticsearch settings based on the config.
+
+    :param dict config:
+        The app configuration
+    :returns: dict
+    """
+    return {
+        'urls': [config.get('es.host', 'http://localhost:9200')]
+    }
+
+
 def get_es(config):
     """
     Return the :py:class:`elasticsearch.Elasticsearch` object based
@@ -375,7 +388,7 @@ def get_es(config):
         The app configuration
     :returns: Elasticsearch
     """
-    return get_es_object(urls=[config.get('es.host', 'http://localhost:9200')])
+    return get_es_object(**get_es_settings(config))
 
 
 def load_model_class(repo, content_type):

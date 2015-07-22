@@ -321,6 +321,19 @@ class TestRepositoryResource(DistributeTestCase):
             'path': upstream_workspace.sm.git_name(person1),
         })
 
+    def test_delete(self):
+        repo_name = os.path.basename(self.workspace.working_dir)
+        request = testing.DummyRequest({})
+        request.matchdict = {
+            'name': repo_name,
+        }
+
+        resource = RepositoryResource(request)
+        resource.delete()
+        self.assertEqual(resource.request.response.status_int, 204)
+        self.assertFalse(self.workspace.sm.storage_exists())
+        self.assertFalse(self.workspace.im.index_exists('master'))
+
 
 class TestContentTypeResource(DistributeTestCase):
 
