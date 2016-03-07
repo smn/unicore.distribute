@@ -1,3 +1,5 @@
+import os
+
 from pyramid.config import Configurator
 
 from unicore.distribute.api import proxy
@@ -20,5 +22,17 @@ def includeme(config):
     proxy_upstream = settings.get('proxy.upstream', 'http://localhost:9200/')
 
     if proxy_enabled == 'true':  # pragma: no cover
-        config.add_route('esapi', '/%s/{parts:.*}' % (proxy_path,))
+        config.add_route('esapi', os.path.join('/', proxy_path, '{parts:.*}'))
         config.add_view(proxy.Proxy(proxy_upstream), route_name='esapi')
+
+    indexing_enabled = settings.get('es.indexing_enabled', 'false').lower()
+    if indexing_enabled == 'true':
+        config.add_subscriber(
+            'unicore.distribute.api.repos.initialize_repo_index',
+            'unicore.distribute.events.RepositoryCloned')
+        config.add_subscriber(
+            'unicore.distribute.api.repos.update_repo_index',
+            'unicore.distribute.events.RepositoryUpdated')
+        config.add_subscriber(
+            'unicore.distribute.api.repos.index_content_type_object',
+            'unicore.distribute.events.ContentTypeObjectUpdated')

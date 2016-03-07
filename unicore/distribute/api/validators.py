@@ -8,6 +8,9 @@ from colander import MappingSchema, SchemaNode, String, Invalid
 from unicore.distribute.utils import get_config, get_repository, get_schema
 
 
+REPO_NAME_CHARS = set('abcdefghijklmnopqrstuvwxyz0123456789.-_')
+
+
 def validate_schema(request):
     config = get_config(request)
     storage_path = config.get('repo.storage_path')
@@ -43,6 +46,17 @@ def repo_url_type_schema_validator(node, value):
         raise Invalid(node, '%r is not a valid repo_url' % (value,))
 
 
+def repo_name_validator(node, value):
+    chars = set(value)
+    if not chars <= REPO_NAME_CHARS:
+        raise Invalid(node, '%r contains invalid characters %r' % (
+            value, chars - REPO_NAME_CHARS))
+    if value in ('.', '..'):
+        raise Invalid(node, '%r is not a valid repo_name' % (value,))
+
+
 class CreateRepoColanderSchema(MappingSchema):
     repo_url = SchemaNode(
         String(), location='body', validator=repo_url_type_schema_validator)
+    repo_name = SchemaNode(
+        String(), location='body', validator=repo_name_validator, missing=None)

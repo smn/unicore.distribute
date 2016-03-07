@@ -5,15 +5,17 @@ from StringIO import StringIO
 from unittest import TestCase
 
 import os
-from elasticgit.tests.base import TestPerson, ModelBaseTest
+from elasticgit.tests.base import TestPerson
 from elasticgit.commands.avro import serialize
 from pyramid import testing
+from git import Repo
+
+from unicore.distribute.tests.base import DistributeTestCase
 from unicore.distribute.utils import (
     UCConfigParser, get_repositories, get_repository, format_repo,
     format_content_type, format_content_type_object, list_schemas, get_schema,
     get_repository_diff, pull_repository_files, add_model_item_to_pull_dict,
-    get_schema_names, clone_repository)
-from git import Repo
+    clone_repository, list_content_types)
 
 
 class TestUCConfigParser(TestCase):
@@ -44,7 +46,7 @@ class TestUCConfigParser(TestCase):
         })
 
 
-class TestRepositoryUtils(ModelBaseTest):
+class TestRepositoryUtils(DistributeTestCase):
     maxDiff = None
     initial_commit = ""
 
@@ -62,6 +64,7 @@ class TestRepositoryUtils(ModelBaseTest):
         self.assertEqual(repo.working_dir, self.workspace.working_dir)
 
     def test_format_repo(self):
+        self.workspace.repo.index.commit('Initial commit')
         formatted = format_repo(self.workspace.repo)
         self.assertEqual(
             set(formatted.keys()),
@@ -119,6 +122,11 @@ class TestRepositoryUtils(ModelBaseTest):
         self.assertEqual(found_schema['namespace'], schema['namespace'])
         self.assertEqual(found_schema['name'], schema['name'])
 
+    def test_list_content_types(self):
+        self.add_schema(self.workspace, TestPerson)
+        content_types = list_content_types(self.workspace.repo)
+        self.assertEqual(content_types, ['elasticgit.tests.base.TestPerson'])
+
     def test_get_schema(self):
         schema_string = serialize(TestPerson)
         schema = json.loads(schema_string)
@@ -134,7 +142,7 @@ class TestRepositoryUtils(ModelBaseTest):
         self.assertEqual(found_schema['name'], schema['name'])
 
 
-class TestRepositoryUtils2(ModelBaseTest):
+class TestRepositoryUtils2(DistributeTestCase):
     """
     Separate class because initialising repo on setup above breaks other tests
     """
@@ -177,12 +185,6 @@ class TestRepositoryUtils2(ModelBaseTest):
         repo = Repo(self.workspace.working_dir)
         repo.commit(repo.index.commit(message))
         return repo.commit().hexsha
-
-    def test_get_schema_names(self):
-        schema = get_schema_names(self.workspace.repo)
-        self.assertGreater(len(schema), 0)
-        self.assertEqual(set(schema),
-                         {TestPerson.__module__ + '.' + TestPerson.__name__})
 
     def test_add_model_item_to_pull_dict(self):
         person = TestPerson({'age': 22, 'name': 'testing'})

@@ -14,6 +14,8 @@ from git.exc import (
 
 import avro.schema
 
+from elasticutils import get_es as get_es_object
+
 from elasticgit.commands.avro import deserialize
 from elasticgit.storage import StorageManager
 
@@ -96,6 +98,17 @@ def get_repository(path):
         raise NotFound('Repository not found.')
 
 
+def get_index_prefix(path):
+    """
+    Return the Elasticsearch index prefix for the repo at path.
+
+    :param str repo_path:
+        The path to the repositoy
+    :returns: string
+    """
+    return os.path.basename(path).lower()
+
+
 def list_schemas(repo):
     """
     Return a list of parsed avro schemas as dictionaries.
@@ -112,6 +125,20 @@ def list_schemas(repo):
             schema = json.load(fp)
             schemas['%(namespace)s.%(name)s' % schema] = schema
     return schemas
+
+
+def list_content_types(repo):
+    """
+    Return a list of content types in a repository.
+
+    :param Repo repo:
+        The git repository.
+    :returns: list
+    """
+    schema_files = glob.glob(
+        os.path.join(repo.working_dir, '_schemas', '*.avsc'))
+    return [os.path.splitext(os.path.basename(schema_file))[0]
+            for schema_file in schema_files]
 
 
 def get_schema(repo, content_type):
@@ -131,6 +158,24 @@ def get_schema(repo, content_type):
             return avro.schema.parse(data)
     except IOError:  # pragma: no cover
         raise NotFound('Schema does not exist.')
+
+
+def get_mapping(repo, content_type):
+    """
+    Return an ES mapping for a content type in a repository.
+
+    :param Repo repo:
+        This git repository.
+    :returns: dict
+    """
+    try:
+        with open(
+            os.path.join(repo.working_dir,
+                         '_mappings',
+                         '%s.json' % (content_type,)), 'r') as fp:
+            return json.load(fp)
+    except IOError:
+        raise NotFound('Mapping does not exist.')
 
 
 def format_repo(repo):
@@ -243,8 +288,7 @@ def format_content_type(repo, content_type):
     :returns: list
     """
     storage_manager = StorageManager(repo)
-    schema = get_schema(repo, content_type).to_json()
-    model_class = deserialize(schema, module_name=schema['namespace'])
+    model_class = load_model_class(repo, content_type)
     return [dict(model_obj)
             for model_obj in storage_manager.iterate(model_class)]
 
@@ -262,8 +306,7 @@ def format_content_type_object(repo, content_type, uuid):
     """
     try:
         storage_manager = StorageManager(repo)
-        schema = get_schema(repo, content_type).to_json()
-        model_class = deserialize(schema, module_name=schema['namespace'])
+        model_class = load_model_class(repo, content_type)
         return dict(storage_manager.get(model_class, uuid))
     except GitCommandError:
         raise NotFound('Object does not exist.')
@@ -307,8 +350,7 @@ def delete_content_type_object(repo, content_type, uuid):
     Delete an object of a certain content type
     """
     storage_manager = StorageManager(repo)
-    schema = get_schema(repo, content_type).to_json()
-    model_class = deserialize(schema, module_name=schema['namespace'])
+    model_class = load_model_class(repo, content_type)
     model = storage_manager.get(model_class, uuid)
     commit = storage_manager.delete(model, 'Deleted via DELETE request.')
     return commit, model
@@ -324,13 +366,43 @@ def get_config(request):  # pragma: no cover
     return request.registry.settings
 
 
-def get_schema_names(repo):
-    schema_files = glob.glob(
-        os.path.join(repo.working_dir, '_schemas', '*.avsc'))
-    names = []
-    for schema_file in schema_files:
-        names.append(os.path.basename(os.path.splitext(schema_file)[0]))
-    return names
+def get_es_settings(config):
+    """
+    Return the Elasticsearch settings based on the config.
+
+    :param dict config:
+        The app configuration
+    :returns: dict
+    """
+    return {
+        'urls': [config.get('es.host', 'http://localhost:9200')]
+    }
+
+
+def get_es(config):
+    """
+    Return the :py:class:`elasticsearch.Elasticsearch` object based
+    on the config.
+
+    :param dict config:
+        The app configuration
+    :returns: Elasticsearch
+    """
+    return get_es_object(**get_es_settings(config))
+
+
+def load_model_class(repo, content_type):
+    """
+    Return a model class for a content type in a repository.
+
+    :param Repo repo:
+        The git repository.
+    :param str content_type:
+        The content type to list
+    :returns: class
+    """
+    schema = get_schema(repo, content_type).to_json()
+    return deserialize(schema, module_name=schema['namespace'])
 
 
 def add_model_item_to_pull_dict(storage_manager, path, pull_dict):
@@ -359,7 +431,7 @@ def get_repository_diff(repo, commit_id):
 
 def pull_repository_files(repo, commit_id):
     changed_files = {}
-    for name in get_schema_names(repo):
+    for name in list_content_types(repo):
         changed_files[name] = []
 
     try:
@@ -391,9 +463,8 @@ def pull_repository_files(repo, commit_id):
 
 
 def clone_repository(repo):
-    get_schema_names(repo)
     files = {}
-    for name in get_schema_names(repo):
+    for name in list_content_types(repo):
         files[name] = format_content_type(repo, name)
 
     files['commit'] = repo.head.commit.hexsha

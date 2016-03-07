@@ -1,3 +1,5 @@
+from urlparse import urljoin
+
 from pyramid.response import Response
 from pyramid.httpexceptions import HTTPNotFound
 
@@ -22,7 +24,7 @@ class ProxyView(object):
         self.upstream_url = upstream_url
 
     def url(self):
-        return '%s%s' % (self.upstream_url, self.request.matchdict['parts'])
+        return urljoin(self.upstream_url, self.request.matchdict['parts'])
 
     def mk_request(self, *args, **kwargs):  # for mocking
         return requests.request(*args, **kwargs)

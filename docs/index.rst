@@ -52,6 +52,30 @@ Put the following in a file called ``development.ini``
     host = 0.0.0.0
     port = 6543
 
+Indexing
+********
+
+unicore.distribute can automatically index data on Elasticsearch. To enable this, add these options to the ``[app:main]`` section:
+
+::
+
+    es.host = http://localhost:9200
+    es.indexing_enabled = true
+
+Proxying
+********
+
+Use unicore.distribute as an Elasticsearch proxy by adding these options to
+the ``[app:main]`` section:
+
+::
+
+    proxy.enabled = True
+    proxy.path = esapi
+    proxy.upstream = http://localhost:9200
+
+For most use cases ``es.host`` and ``proxy.upstream`` should point to the same Elasticsearch service.
+
 Running
 =======
 
@@ -66,6 +90,15 @@ It is also possible the clone a repository directly from the API::
 
     $ curl -XPOST -H 'Content-Type: application/json' \
         -d '{"repo_url": "https://example.com/repo.git"}' \
+        http://localhost:6543/repos.json
+
+The repo will only be indexed if cloned via the API (and indexing is enabled). **Note that the repo name and index prefix are the same.** So in the two examples above the index prefixes are "unicore-sample-content" and "repo" respectively.
+
+To use a different repo name, specify ``repo_name``::
+
+    $ curl -XPOST -H 'Content-Type: application/json' \
+        -d '{"repo_url": "https://example.com/repo.git", \
+             "repo_name": "repo-foo"}' \
         http://localhost:6543/repos.json
 
 Webhooks
