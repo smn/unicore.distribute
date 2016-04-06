@@ -86,12 +86,12 @@ def get_repositories(path):
 
 def get_repository_names(path):
     """
-    Return an array of tuples with the name and path for
+    Return an array of the path name for
     repositories found in a directory.
 
     :param str path:
         The path to find repositories in
-    :returns: tuple
+    :returns: array
     """
     return [subdir
             for subdir in os.listdir(path)
