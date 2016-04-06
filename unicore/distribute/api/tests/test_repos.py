@@ -60,6 +60,14 @@ class TestRepositoryResource(DistributeTestCase):
         [repo_json] = resource.collection_get()
         self.assertEqual(repo_json, format_repo(self.workspace.repo))
 
+    def test_collection_get_name_only(self):
+        request = testing.DummyRequest({'name_only': True})
+        resource = RepositoryResource(request)
+        [repo_json] = resource.collection_get()
+        self.assertEqual(repo_json, {
+            'name': 'unicore.distribute.api.tests.test_repos.'
+                    'TestRepositoryResource.test_collection_get_name_only'})
+
     def test_collection_post_success(self):
         # NOTE: cloning to a different directory called `remote` because
         #       the API is trying to clone into the same folder as the
@@ -119,7 +127,7 @@ class TestRepositoryResource(DistributeTestCase):
 
         with patch.object(
                 ESManager, 'destroy_index', wraps=im.destroy_index
-                ) as mocked_destroy:
+        ) as mocked_destroy:
             initialize_repo_index(event)
             self.assertTrue(mocked_destroy.called)
             self.assertTrue(im.index_exists(sm.active_branch()))

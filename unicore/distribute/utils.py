@@ -84,6 +84,20 @@ def get_repositories(path):
             os.path.join(path, subdir, '.git'))]
 
 
+def get_repository_names(path):
+    """
+    Return an array of tuples with the name and path for
+    repositories found in a directory.
+
+    :param str path:
+        The path to find repositories in
+    :returns: tuple
+    """
+    return [subdir
+            for subdir in os.listdir(path)
+            if os.path.isdir(os.path.join(path, subdir, '.git'))]
+
+
 def get_repository(path):
     """
     Return a repository for whatever's at a path

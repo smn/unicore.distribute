@@ -21,7 +21,8 @@ from unicore.distribute.utils import (
     format_content_type, format_content_type_object,
     save_content_type_object, delete_content_type_object,
     format_diffindex, get_index_prefix, load_model_class,
-    get_es, get_es_settings, get_mapping, list_content_types)
+    get_es, get_es_settings, get_mapping, list_content_types,
+    get_repository_names)
 
 
 @resource(collection_path='/repos.json', path='/repos/{name}.json')
@@ -33,6 +34,10 @@ class RepositoryResource(object):
 
     def collection_get(self):
         storage_path = self.config.get('repo.storage_path')
+        if self.request.GET.get('name_only'):
+            return [
+                {'name': repo_path}
+                for repo_path in get_repository_names(storage_path)]
         return [format_repo(repo) for repo in get_repositories(storage_path)]
 
     @view(schema=CreateRepoColanderSchema)
