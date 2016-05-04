@@ -17,9 +17,12 @@ def includeme(config):
     config.scan('.repos')
 
     settings = config.registry.settings
-    proxy_enabled = settings.get('proxy.enabled', 'false').lower()
-    proxy_path = settings.get('proxy.path', 'esapi')
-    proxy_upstream = settings.get('proxy.upstream', 'http://localhost:9200/')
+    proxy_enabled = os.environ.get('PROXY_ENABLED') or settings.get(
+        'proxy.enabled', 'false').lower()
+    proxy_path = os.environ.get('PROXY_PATH') or settings.get(
+        'proxy.path', 'esapi')
+    proxy_upstream = os.environ.get('ES_HOST') or settings.get(
+        'proxy.upstream', 'http://localhost:9200/')
 
     if proxy_enabled == 'true':  # pragma: no cover
         config.add_route('esapi', os.path.join('/', proxy_path, '{parts:.*}'))
