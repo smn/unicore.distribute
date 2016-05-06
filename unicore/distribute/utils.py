@@ -382,14 +382,15 @@ def get_config(request):  # pragma: no cover
 
 def get_es_settings(config):
     """
-    Return the Elasticsearch settings based on the config.
+    Return the Elasticsearch settings based on the config or ENV.
 
     :param dict config:
         The app configuration
     :returns: dict
     """
+    es_host = os.environ.get('ES_HOST')
     return {
-        'urls': [config.get('es.host', 'http://localhost:9200')]
+        'urls': [es_host or config.get('es.host', 'http://localhost:9200')]
     }
 
 
