@@ -1,6 +1,10 @@
 CHANGE LOG
 ==========
 
+1.1.1
+-----
+- enable reading es host from env
+
 1.1.0
 -----
 - Added name_only parameter for get_repos for a faster api
