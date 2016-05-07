@@ -1,6 +1,10 @@
 CHANGE LOG
 ==========
 
+1.1.2
+-----
+- ensure INDEXING_ENABLED is also read from env
+
 1.1.1
 -----
 - enable reading es host from env
