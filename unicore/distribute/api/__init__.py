@@ -28,7 +28,8 @@ def includeme(config):
         config.add_route('esapi', os.path.join('/', proxy_path, '{parts:.*}'))
         config.add_view(proxy.Proxy(proxy_upstream), route_name='esapi')
 
-    indexing_enabled = settings.get('es.indexing_enabled', 'false').lower()
+    indexing_enabled = os.environ.get('INDEXING_ENABLED') or settings.get(
+        'es.indexing_enabled', 'false').lower()
     if indexing_enabled == 'true':
         config.add_subscriber(
             'unicore.distribute.api.repos.initialize_repo_index',
