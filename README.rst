@@ -15,7 +15,7 @@ Distribution tools for Universal Core content.
     :target: https://unicoredistribute.readthedocs.org
     :alt: unicore.distribute Documentation
 
-.. image:: https://pypip.in/version/unicore.distribute/badge.svg
+.. image:: https://img.shields.io/pypi/v/unicore.distribute.svg
     :target: https://pypi.python.org/pypi/unicore.distribute
     :alt: Pypi Package
 
